@@ -1,34 +1,21 @@
-﻿using System.Globalization;
-using ProjectApp.Abstractions;
+﻿using ProjectApp.Abstractions;
+using ProjectApp.Console.UI;
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataAccess.Memory.Repositories;
-using ProjectApp.ServiceAbstractions;
 using ProjectApp.Services;
 
+// 1. Inicjalizacja Bazy i Repozytoriów
 var db = new MemoryDbContext();
-
 IPackageRepository packageRepo = new PackageRepositoryMemory(db);
 
-IPackageService packageSvc = new PackageService(packageRepo);
+// 2. Inicjalizacja Serwisów
+var packageSvc = new PackageService(packageRepo);
+var logisticsSvc = new LogisticsService(db);
 
-DataSeeder seeder = new DataSeeder(packageSvc);
+// 3. Seedowanie danych (opcjonalne, ale przydatne)
+var seeder = new DataSeeder(packageSvc, db);
 seeder.Seed();
 
-Console.WriteLine("Dane zseedowane. Dostepne paczki:");
-ShowPackages(packageSvc, true);
-
-static void ShowPackages(IPackageService packageSvc, bool showPackages)
-{
-    var packages = packageSvc.GetAll();
-    if (packages.Any())
-    {
-        Console.WriteLine("Brak paczek.");
-        return;
-    }
-    Console.WriteLine("---- Paczki: ----");
-
-    foreach (var p in packages)
-    {
-        Console.WriteLine(p.ToString());
-    }
-}
+// 4. Uruchomienie Menu Głównego
+var mainMenu = new MainMenu(packageSvc, logisticsSvc, db);
+mainMenu.Run();

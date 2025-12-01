@@ -1,18 +1,9 @@
 ﻿namespace ProjectApp.DataModel
-{  public class Storage : Package
+{
+    public class Storage
     {
-        public Guid storageId { get; set; }
-        public Package package { get; set; }
-        public Worker assignedWorker { get; set; }
-        public Vehicle assignedVehicle { get; set; }
-        public DateTime assignDate { get; set; }
-        public List<Package> packages { get; set; }
-
-        public Storage(){}
-
-        public void UpdateAssignment(){}
-
-        public void DisplayStorageInfo(){}
+        public Guid StorageId { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = "Main Storage";
+        public List<Package> StoredPackages { get; set; } = new();
     }
-
 }

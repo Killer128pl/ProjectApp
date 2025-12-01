@@ -2,11 +2,10 @@
 {
     public class Vehicle
     {
-        public Guid vehicleId {  get; set; }
-        public string? brand {  get; set; }
-        public string? model { get; set; }
-        public string? regNumber { get; set; }
-        public string? vehicleStatus { get; set; }
-        public void updateStatus() { }
+        public Guid VehicleId { get; set; } = Guid.NewGuid();
+        public string? Brand { get; set; }
+        public string? Model { get; set; }
+        public string? RegNumber { get; set; }
+        public string VehicleStatus { get; set; } = "Available";
     }
 }

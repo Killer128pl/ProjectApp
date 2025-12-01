@@ -2,11 +2,10 @@
 {
     public class PersonalData
     {
-        private string? firstName { get; set; }
-        private string? lastName { get; set; }
-        private string? address { get; set; }
-        private int phoneNumber { get; set; }
-        private string? email { get; set; }
-        public void displayData() { }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Address { get; set; }
+        public int PhoneNumber { get; set; }
+        public string? Email { get; set; }
     }
 }

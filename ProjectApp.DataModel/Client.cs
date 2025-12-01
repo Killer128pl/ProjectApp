@@ -2,8 +2,6 @@
 {
     public class Client : PersonalData
     {
-        private int clientId {  get; set; }
-        private List<Package>? sentPackages { get; set; }
-        public Package sendPackage() {}
+        public Guid ClientId { get; set; } = Guid.NewGuid();
     }
 }
