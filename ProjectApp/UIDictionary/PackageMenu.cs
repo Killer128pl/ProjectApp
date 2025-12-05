@@ -67,7 +67,7 @@ namespace ProjectApp.Console.UIDictionary
             int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
             if (idx < 0) return;
 
-            System.Console.WriteLine("0-Nadana, 1-WTrasie, 2-Dostarczona, 3-Uszkodzona, 4-Zwrot");
+            System.Console.WriteLine("0-Nadana, 1-WTrasie, 2-Dostarczona, 3-Uszkodzona");
             int s = (int)ConsoleHelpers.ReadFloat("Status: ");
             if (s >= 0 && s <= 4) _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)s);
             ConsoleHelpers.Pause();
