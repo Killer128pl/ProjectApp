@@ -2,16 +2,17 @@
 {
     public enum PackageStatus
     {
-        Sent,
-        InTransit,
-        Delivered,
-        Damaged
+        Nadana,         // Dawniej Sent
+        WTrasie,        // Dawniej InTransit
+        Dostarczona,    // Dawniej Delivered
+        Uszkodzona,     // Dawniej Damaged
+        Zwrot           // Nowy status opcjonalny
     }
 
     public enum PaymentStatus
     {
-        Paid,
-        NotPaid,
-        OnDeliveryPayment
+        Oplacona,           // Paid
+        Nieoplacona,        // NotPaid
+        PlatnoscPrzyOdbiorze // OnDelivery
     }
 }

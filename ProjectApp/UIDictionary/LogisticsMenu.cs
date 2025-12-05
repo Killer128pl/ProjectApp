@@ -2,7 +2,7 @@
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.Services;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public class LogisticsMenu : MenuBase
     {
@@ -79,7 +79,7 @@ namespace ProjectApp.Console.UI
 
         private void AssignPackage()
         {
-            var packages = _db.Packages.Where(p => p.PackageStatus == DataModel.PackageStatus.Sent).ToList();
+            var packages = _db.Packages.Where(p => p.PackageStatus == DataModel.PackageStatus.Nadana).ToList();
             var couriers = _db.Workers.Where(w => w.Position == "Kurier").ToList();
 
             if (!packages.Any())

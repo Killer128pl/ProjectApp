@@ -1,6 +1,6 @@
 ﻿using ProjectApp.Console.Helpers;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public abstract class MenuBase
     {

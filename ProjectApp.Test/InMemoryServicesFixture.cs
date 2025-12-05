@@ -14,8 +14,9 @@ public class InMemoryServicesFixture
         var db = new MemoryDbContext();
 
         IPackageRepository packageRepo = new PackageRepositoryMemory(db);
+        PackageService = new PackageService(packageRepo);
 
-        _dataSeeder = new DataSeeder(PackageService);
+        _dataSeeder = new DataSeeder(PackageService, db);
         _dataSeeder.Seed();
     }
 }

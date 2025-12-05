@@ -15,8 +15,4 @@
     <ProjectReference Include="..\ProjectApp.Services.Memory\ProjectApp.Services.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="UIDictionary\" />
-  </ItemGroup>
-
 </Project>

@@ -1,4 +1,5 @@
 ﻿using ProjectApp.Console.Helpers;
+using ProjectApp.Console.UIDictionary;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
 using System;
@@ -31,16 +32,19 @@ namespace ProjectApp.Console.UI
         private void ShowMyPackages()
         {
             var packages = _packageService.GetPackagesByClient(_currentClient.ClientId);
-            if (!packages.Any())
-            {
-                System.Console.WriteLine("Brak historii przesyłek.");
-                ConsoleHelpers.Pause();
-                return;
-            }
+            if (!packages.Any()) { System.Console.WriteLine("Brak historii przesyłek."); ConsoleHelpers.Pause(); return; }
 
             foreach (var p in packages)
             {
                 System.Console.WriteLine(p);
+
+                // --- LOGIKA ZWROTU PIENIĘDZY ---
+                if (p.PackageStatus == PackageStatus.Uszkodzona)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Red;
+                    System.Console.WriteLine("   (!) UWAGA: Paczka uszkodzona. Prosimy zgłosić się po zwrot pieniędzy.");
+                    System.Console.ResetColor();
+                }
             }
             ConsoleHelpers.Pause();
         }
@@ -54,40 +58,32 @@ namespace ProjectApp.Console.UI
             var id = Guid.NewGuid();
             _packageService.CreatePackage(id, _currentClient.ClientId, DateTime.Now, weight, size);
 
-            System.Console.WriteLine($"\nSukces! Paczka o numerze {id} została nadana.");
-            System.Console.WriteLine("Status płatności: NIEOPŁACONA. Przejdź do płatności, aby zrealizować wysyłkę.");
+            System.Console.WriteLine($"\nNadano! Nr: {id}.");
             ConsoleHelpers.Pause();
         }
 
         private void PayForPackages()
         {
             var unpaid = _packageService.GetPackagesByClient(_currentClient.ClientId)
-                                        .Where(p => p.PaymentStatus == PaymentStatus.NotPaid)
+                                        .Where(p => p.PaymentStatus == PaymentStatus.Nieoplacona)
                                         .ToList();
 
             if (!unpaid.Any())
             {
-                System.Console.WriteLine("Wszystkie Twoje rachunki są uregulowane.");
+                System.Console.WriteLine("Wszystkie rachunki uregulowane.");
                 ConsoleHelpers.Pause();
                 return;
             }
 
-            System.Console.WriteLine("--- OCZEKUJĄCE PŁATNOŚCI ---");
             for (int i = 0; i < unpaid.Count; i++)
-            {
-                decimal price = (decimal)unpaid[i].Weight * 10m; // liczenie ceny wysyłki
-                System.Console.WriteLine($"{i + 1}) Paczka: {unpaid[i].TrackingNumber} | Do zapłaty: {price:C2}");
-            }
+                System.Console.WriteLine($"{i + 1}) {unpaid[i].TrackingNumber} ({unpaid[i].Weight * 10:C})");
 
-            int idx = ConsoleHelpers.ReadIndex("\nWybierz paczkę do opłacenia (numer): ", unpaid.Count);
+            int idx = ConsoleHelpers.ReadIndex("Wybierz do opłacenia: ", unpaid.Count);
             if (idx < 0) return;
 
-            float amount = unpaid[idx].Weight * 10.0f;
-            bool success = PaymentSimulator.ProcessPayment(amount);
-
-            if (success)
+            if (PaymentSimulator.ProcessPayment(unpaid[idx].Weight * 10.0f))
             {
-                _packageService.UpdatePaymentStatus(unpaid[idx].TrackingNumber, PaymentStatus.Paid);
+                _packageService.UpdatePaymentStatus(unpaid[idx].TrackingNumber, PaymentStatus.Oplacona);
             }
         }
     }

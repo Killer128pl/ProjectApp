@@ -25,8 +25,8 @@ namespace ProjectApp.Services
                 SentDate = sentDate,
                 Weight = weight,
                 Size = size,
-                PackageStatus = PackageStatus.Sent,
-                PaymentStatus = PaymentStatus.NotPaid
+                PackageStatus = PackageStatus.Nadana, // Zmiana na PL
+                PaymentStatus = PaymentStatus.Nieoplacona // Zmiana na PL
             };
             _packages.Add(package);
             return package.TrackingNumber;
@@ -36,7 +36,9 @@ namespace ProjectApp.Services
 
         public IEnumerable<Package> Search(Guid trackingNumber) => _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
 
-        public Package? Get(Guid trackingNumber) => _packages.Get(trackingNumber);
+        public IEnumerable<Package> GetPackagesByClient(Guid clientId) => _packages.GetAll().Where(p => p.SenderId == clientId);
+
+        public IEnumerable<Package> GetPackagesByWorker(Guid workerId) => _packages.GetAll().Where(p => p.AssignedWorkerId == workerId);
 
         public bool UpdatePackageStatus(Guid trackingNumber, PackageStatus status)
         {
@@ -52,16 +54,6 @@ namespace ProjectApp.Services
             if (m is null) return false;
             m.PaymentStatus = status;
             return true;
-        }
-
-        public IEnumerable<Package> GetPackagesByClient(Guid clientId)
-        {
-            return _packages.GetAll().Where(p => p.SenderId == clientId);
-        }
-
-        public IEnumerable<Package> GetPackagesByWorker(Guid workerId)
-        {
-            return _packages.GetAll().Where(p => p.AssignedWorkerId == workerId);
         }
     }
 }

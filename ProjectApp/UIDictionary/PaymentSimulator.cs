@@ -2,7 +2,7 @@
 using System;
 using System.Threading;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public static class PaymentSimulator
     {
