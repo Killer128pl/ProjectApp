@@ -1,6 +1,9 @@
 ﻿using ProjectApp.Abstractions;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectApp.Services
 {
@@ -13,35 +16,27 @@ namespace ProjectApp.Services
             _packages = packages;
         }
 
-        public Guid CreatePackage(Guid trackingNumber, DateTime sentDate, float weight, string size)
+        public Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size)
         {
             var package = new Package
             {
                 TrackingNumber = trackingNumber,
+                SenderId = senderId,
                 SentDate = sentDate,
                 Weight = weight,
                 Size = size,
-                PackageStatus = PackageStatus.Sent
+                PackageStatus = PackageStatus.Sent,
+                PaymentStatus = PaymentStatus.NotPaid
             };
-
             _packages.Add(package);
             return package.TrackingNumber;
         }
 
-        public IReadOnlyList<Package> GetAll()
-        {
-            return _packages.Query().OrderBy(m => m.SentDate).ToList();
-        }
+        public IReadOnlyList<Package> GetAll() => _packages.Query().OrderBy(m => m.SentDate).ToList();
 
-        public IEnumerable<Package> Search(Guid trackingNumber)
-        {
-            return _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
-        }
+        public IEnumerable<Package> Search(Guid trackingNumber) => _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
 
-        public Package? Get(Guid trackingNumber)
-        {
-            return _packages.Get(trackingNumber);
-        }
+        public Package? Get(Guid trackingNumber) => _packages.Get(trackingNumber);
 
         public bool UpdatePackageStatus(Guid trackingNumber, PackageStatus status)
         {
@@ -57,6 +52,16 @@ namespace ProjectApp.Services
             if (m is null) return false;
             m.PaymentStatus = status;
             return true;
+        }
+
+        public IEnumerable<Package> GetPackagesByClient(Guid clientId)
+        {
+            return _packages.GetAll().Where(p => p.SenderId == clientId);
+        }
+
+        public IEnumerable<Package> GetPackagesByWorker(Guid workerId)
+        {
+            return _packages.GetAll().Where(p => p.AssignedWorkerId == workerId);
         }
     }
 }

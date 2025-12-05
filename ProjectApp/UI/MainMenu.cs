@@ -1,6 +1,8 @@
 ﻿using ProjectApp.DataAccess.Memory;
 using ProjectApp.ServiceAbstractions;
 using ProjectApp.Services;
+using System.Collections.Generic;
+using System;
 
 namespace ProjectApp.Console.UI
 {
@@ -11,16 +13,17 @@ namespace ProjectApp.Console.UI
 
         public MainMenu(IPackageService packageSvc, LogisticsService logisticsSvc, MemoryDbContext db)
         {
-            _packageMenu = new PackageMenu(packageSvc);
+            _packageMenu = new PackageMenu(packageSvc, db);
             _logisticsMenu = new LogisticsMenu(logisticsSvc, db);
         }
 
-        protected override string Title => "SYSTEM LOGISTYCZNY - MENU GŁÓWNE";
+        protected override string Title => "PANEL ADMINISTRATORA (ZARZĄDZANIE)";
+
         protected override Dictionary<char, MenuOption> Options => new()
         {
             ['1'] = new("Obsługa Paczek", () => _packageMenu.Run()),
             ['2'] = new("Logistyka (Flota i Kurierzy)", () => _logisticsMenu.Run()),
-            ['0'] = new("Wyjście z systemu", null),
+            ['0'] = new("Powrót do ekranu logowania", null),
         };
     }
 }
