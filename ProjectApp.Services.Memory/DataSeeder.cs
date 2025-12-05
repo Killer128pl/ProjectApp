@@ -28,7 +28,7 @@ namespace ProjectApp.Services
             var pckg3 = _packageService.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now.AddDays(-2), 5.0f, "Huge");
 
             // Flota i Kadra
-            _db.Vehicles.Add(new Vehicle { Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Available" });
+            _db.Vehicles.Add(new Vehicle { Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Dostępny" });
             _db.Workers.Add(new Worker { FirstName = "Piotr", LastName = "Szybki", Position = "Kurier" });
             _db.Workers.Add(new Worker { FirstName = "Adam", LastName = "Nowak", Position = "Magazynier" });
 

@@ -16,10 +16,10 @@ namespace ProjectApp.Services
             var vehicle = _db.Vehicles.FirstOrDefault(v => v.VehicleId == vehicleId);
 
             if (worker == null || vehicle == null) return false;
-            if (vehicle.VehicleStatus != "Available") return false;
+            if (vehicle.VehicleStatus != "Dostępny") return false;
 
             worker.AssignedVehicleId = vehicle.VehicleId;
-            vehicle.VehicleStatus = "InUse";
+            vehicle.VehicleStatus = "Zajęty";
             return true;
         }
 
@@ -32,7 +32,7 @@ namespace ProjectApp.Services
             if (worker.Position != "Kurier" || worker.AssignedVehicleId == null) return false;
 
             package.AssignedWorkerId = worker.WorkerId;
-            package.PackageStatus = PackageStatus.WTrasie; // Zmiana na PL
+            package.PackageStatus = PackageStatus.WTrasie;
 
             return true;
         }

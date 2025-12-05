@@ -25,8 +25,8 @@ namespace ProjectApp.Services
                 SentDate = sentDate,
                 Weight = weight,
                 Size = size,
-                PackageStatus = PackageStatus.Nadana, // Zmiana na PL
-                PaymentStatus = PaymentStatus.Nieoplacona // Zmiana na PL
+                PackageStatus = PackageStatus.Nadana,
+                PaymentStatus = PaymentStatus.Nieoplacona 
             };
             _packages.Add(package);
             return package.TrackingNumber;

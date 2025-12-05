@@ -18,7 +18,6 @@ namespace ProjectApp.DataModel
             string payInfo = PaymentStatus == PaymentStatus.Oplacona ? "[OPŁACONA]" : "[NIEOPŁACONA]";
             string statusInfo = PackageStatus.ToString().ToUpper();
 
-            // Formatowanie dla czytelności (np. WTRASIE -> W TRASIE)
             if (PackageStatus == PackageStatus.WTrasie) statusInfo = "W TRASIE";
 
             return $"{payInfo} Nr: {TrackingNumber.ToString().Substring(0, 8)}... | Status: {statusInfo} | Waga: {Weight}kg";

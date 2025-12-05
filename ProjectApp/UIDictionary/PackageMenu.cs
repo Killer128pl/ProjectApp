@@ -20,7 +20,7 @@ namespace ProjectApp.Console.UIDictionary
             _db = db;
         }
 
-        protected override string Title => "Panel zarządzania firmą (Admin)";
+        protected override string Title => "Panel zarządzania paczkami (Admin)";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
