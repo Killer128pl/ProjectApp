@@ -14,17 +14,17 @@ namespace ProjectApp.Console.UI
         private readonly IPackageService _packageSvc;
         private readonly LogisticsService _logisticsSvc;
         private readonly MemoryDbContext _db;
-        private readonly MainMenu _adminPanel;
+        private readonly AdminMenu _adminPanel;
 
         public StartMenu(IPackageService pkg, LogisticsService log, MemoryDbContext db)
         {
             _packageSvc = pkg;
             _logisticsSvc = log;
             _db = db;
-            _adminPanel = new MainMenu(pkg, log, db);
+            _adminPanel = new AdminMenu(pkg, log, db);
         }
 
-        protected override string Title => "SYSTEM LOGISTYCZNY - WITAJ";
+        protected override string Title => "SYSTEM FIRMY KURIERSKIEJ - WITAJ";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {

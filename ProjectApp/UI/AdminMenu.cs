@@ -10,14 +10,14 @@ using System.Linq;
 
 namespace ProjectApp.Console.UI
 {
-    public class MainMenu : MenuBase
+    public class AdminMenu : MenuBase
     {
         private readonly PackageMenu _packageMenu;
         private readonly LogisticsMenu _logisticsMenu;
         private readonly MemoryDbContext _db;
         private readonly IPackageService _packageSvc;
 
-        public MainMenu(IPackageService packageSvc, LogisticsService logisticsSvc, MemoryDbContext db)
+        public AdminMenu(IPackageService packageSvc, LogisticsService logisticsSvc, MemoryDbContext db)
         {
             _packageMenu = new PackageMenu(packageSvc, db);
             _logisticsMenu = new LogisticsMenu(logisticsSvc, db);
