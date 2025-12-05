@@ -21,7 +21,7 @@ namespace ProjectApp.Console.UI
             _worker = worker;
         }
 
-        protected override string Title => $"KURIER: {_worker.LastName}";
+        protected override string Title => $"Kurier: {_worker.LastName}";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
@@ -55,7 +55,7 @@ namespace ProjectApp.Console.UI
             int idx = ConsoleHelpers.ReadIndex("Paczka: ", packs.Count);
             if (idx < 0) return;
 
-            System.Console.WriteLine("2-Dostarczona, 3-Uszkodzona, 4-Zwrot");
+            System.Console.WriteLine("2 - Dostarczona, 3 - Uszkodzona");
             int s = (int)ConsoleHelpers.ReadFloat("Status: ");
             if (s >= 2 && s <= 4) _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)s);
             ConsoleHelpers.Pause();

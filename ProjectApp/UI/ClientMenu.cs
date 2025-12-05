@@ -19,7 +19,7 @@ namespace ProjectApp.Console.UI
             _currentClient = client;
         }
 
-        protected override string Title => $"PANEL KLIENTA: {_currentClient.FirstName} {_currentClient.LastName}";
+        protected override string Title => $"Panel klienta: {_currentClient.FirstName} {_currentClient.LastName}";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
@@ -51,9 +51,9 @@ namespace ProjectApp.Console.UI
 
         private void SendPackage()
         {
-            System.Console.WriteLine("--- NOWA PRZESYŁKA ---");
+            System.Console.WriteLine("--- Nowa przesyłka ---");
             float weight = ConsoleHelpers.ReadFloat("Podaj wagę (kg): ");
-            string size = ConsoleHelpers.ReadString("Podaj rozmiar (Small/Medium/Big): ");
+            string size = ConsoleHelpers.ReadString("Podaj rozmiar: ");
 
             var id = Guid.NewGuid();
             _packageService.CreatePackage(id, _currentClient.ClientId, DateTime.Now, weight, size);
@@ -78,7 +78,7 @@ namespace ProjectApp.Console.UI
             for (int i = 0; i < unpaid.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {unpaid[i].TrackingNumber} ({unpaid[i].Weight * 10:C})");
 
-            int idx = ConsoleHelpers.ReadIndex("Wybierz do opłacenia: ", unpaid.Count);
+            int idx = ConsoleHelpers.ReadIndex("Wybierz paczkę do opłacenia: ", unpaid.Count);
             if (idx < 0) return;
 
             if (PaymentSimulator.ProcessPayment(unpaid[idx].Weight * 10.0f))

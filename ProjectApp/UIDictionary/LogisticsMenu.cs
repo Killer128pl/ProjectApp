@@ -15,7 +15,7 @@ namespace ProjectApp.Console.UIDictionary
             _db = db;
         }
 
-        protected override string Title => "LOGISTYKA I FLOTA";
+        protected override string Title => "Logistyka i flota";
         protected override Dictionary<char, MenuOption> Options => new()
         {
             ['1'] = new("Pokaż pracowników", ShowWorkers),
@@ -30,7 +30,7 @@ namespace ProjectApp.Console.UIDictionary
             if (!_db.Workers.Any()) System.Console.WriteLine("Brak pracowników.");
             foreach (var w in _db.Workers)
             {
-                string autoInfo = w.AssignedVehicleId.HasValue ? $"AutoID: {w.AssignedVehicleId}" : "BRAK AUTA";
+                string autoInfo = w.AssignedVehicleId.HasValue ? $"AutoID: {w.AssignedVehicleId}" : "Brak auta";
                 System.Console.WriteLine($"{w.FirstName} {w.LastName} [{w.Position}] - {autoInfo}");
             }
             ConsoleHelpers.Pause();
@@ -58,14 +58,14 @@ namespace ProjectApp.Console.UIDictionary
                 return;
             }
 
-            System.Console.WriteLine("--- PRACOWNICY ---");
+            System.Console.WriteLine("--- Pracownicy ---");
             for (int i = 0; i < workers.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {workers[i].LastName} ({workers[i].Position})");
 
             int wIdx = ConsoleHelpers.ReadIndex("Wybierz pracownika: ", workers.Count);
             if (wIdx < 0) return;
 
-            System.Console.WriteLine("\n--- POJAZDY ---");
+            System.Console.WriteLine("\n--- Pojazdy ---");
             for (int i = 0; i < vehicles.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {vehicles[i].Brand} {vehicles[i].Model} [{vehicles[i].VehicleStatus}]");
 
@@ -95,17 +95,17 @@ namespace ProjectApp.Console.UIDictionary
                 return;
             }
 
-            System.Console.WriteLine("--- PACZKI (SENT) ---");
+            System.Console.WriteLine("--- Nadane Paczki ---");
             for (int i = 0; i < packages.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {packages[i].TrackingNumber} ({packages[i].Weight}kg)");
 
             int pIdx = ConsoleHelpers.ReadIndex("Wybierz paczkę: ", packages.Count);
             if (pIdx < 0) return;
 
-            System.Console.WriteLine("\n--- KURIERZY ---");
+            System.Console.WriteLine("\n--- Kurierzy ---");
             for (int i = 0; i < couriers.Count; i++)
             {
-                string auto = couriers[i].AssignedVehicleId.HasValue ? "MA AUTO" : "PIESZY";
+                string auto = couriers[i].AssignedVehicleId.HasValue ? "Ma przypisane auto" : "Pieszy";
                 System.Console.WriteLine($"{i + 1}) {couriers[i].LastName} [{auto}]");
             }
 

@@ -17,7 +17,7 @@ namespace ProjectApp.Console.UIDictionary
             _worker = worker;
         }
 
-        protected override string Title => $"MAGAZYN: {_worker.LastName}";
+        protected override string Title => $"Magazyn: {_worker.LastName}";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {

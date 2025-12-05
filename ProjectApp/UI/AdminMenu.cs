@@ -25,11 +25,11 @@ namespace ProjectApp.Console.UI
             _packageSvc = packageSvc;
         }
 
-        protected override string Title => "PANEL ADMINISTRATORA (ZARZĄDZANIE)";
+        protected override string Title => "Panel zarządzania firmą (Admin)";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
-            ['1'] = new("Obsługa Paczek (CRUD)", () => _packageMenu.Run()),
+            ['1'] = new("Zarządzanie magazynem (Paczki)", () => _packageMenu.Run()),
             ['2'] = new("Logistyka (Flota i Kurierzy)", () => _logisticsMenu.Run()),
             ['3'] = new("Zarządzanie Kadrami (Dodaj pracownika)", AddWorker),
             ['4'] = new("Zarządzanie Klientami (Dodaj klienta)", AddClient),
@@ -39,11 +39,11 @@ namespace ProjectApp.Console.UI
 
         private void AddWorker()
         {
-            System.Console.WriteLine("--- NOWY PRACOWNIK ---");
+            System.Console.WriteLine("--- Nowy pracownik ---");
             string imie = ConsoleHelpers.ReadString("Imię: ");
             string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
 
-            System.Console.WriteLine("Stanowisko: 1. Kurier, 2. Magazynier");
+            System.Console.WriteLine("Stanowisko: 1 - Kurier, 2 - Magazynier");
             int role = (int)ConsoleHelpers.ReadFloat("Wybierz: ");
             string position = role == 1 ? "Kurier" : "Magazynier";
 
@@ -54,7 +54,7 @@ namespace ProjectApp.Console.UI
 
         private void AddClient()
         {
-            System.Console.WriteLine("--- NOWY KLIENT ---");
+            System.Console.WriteLine("--- Nowy klient ---");
             string imie = ConsoleHelpers.ReadString("Imię: ");
             string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
             _db.Clients.Add(new Client { FirstName = imie, LastName = nazwisko });
@@ -65,9 +65,9 @@ namespace ProjectApp.Console.UI
         private void ShowGlobalReport()
         {
             var packages = _packageSvc.GetAll();
-            System.Console.WriteLine($"=== RAPORT SYSTEMOWY ===");
+            System.Console.WriteLine($"=== Raport systemowy ===");
             System.Console.WriteLine($"Łączna liczba paczek: {packages.Count}");
-            System.Console.WriteLine($"Nadane (Oczekujące): {packages.Count(p => p.PackageStatus == PackageStatus.Nadana)}");
+            System.Console.WriteLine($"Nadane paczki: {packages.Count(p => p.PackageStatus == PackageStatus.Nadana)}");
             System.Console.WriteLine($"W trasie: {packages.Count(p => p.PackageStatus == PackageStatus.WTrasie)}");
             System.Console.WriteLine($"Dostarczone: {packages.Count(p => p.PackageStatus == PackageStatus.Dostarczona)}");
             System.Console.WriteLine($"Uszkodzone: {packages.Count(p => p.PackageStatus == PackageStatus.Uszkodzona)}");

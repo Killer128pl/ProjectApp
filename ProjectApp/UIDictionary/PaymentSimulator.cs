@@ -14,7 +14,7 @@ namespace ProjectApp.Console.UIDictionary
             System.Console.WriteLine("========================================");
             System.Console.WriteLine($"Kwota do zapłaty: {amount:C2}");
             System.Console.WriteLine("\nWybierz metodę płatności:");
-            System.Console.WriteLine("1. BLIK (Szybko)");
+            System.Console.WriteLine("1. BLIK");
             System.Console.WriteLine("2. Karta Kredytowa");
             System.Console.WriteLine("3. Przelew Tradycyjny");
             System.Console.WriteLine("0. Anuluj");
@@ -25,7 +25,7 @@ namespace ProjectApp.Console.UIDictionary
             if (key.KeyChar == '0') return false;
 
             System.Console.WriteLine("\n\nŁączenie z bankiem...");
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 8; i++)
             {
                 System.Console.Write("█");
                 Thread.Sleep(300);

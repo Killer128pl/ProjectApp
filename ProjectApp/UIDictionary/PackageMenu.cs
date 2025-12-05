@@ -20,7 +20,7 @@ namespace ProjectApp.Console.UIDictionary
             _db = db;
         }
 
-        protected override string Title => "ZARZĄDZANIE PACZKAMI (ADMIN)";
+        protected override string Title => "Panel zarządzania firmą (Admin)";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
@@ -67,7 +67,7 @@ namespace ProjectApp.Console.UIDictionary
             int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
             if (idx < 0) return;
 
-            System.Console.WriteLine("0-Nadana, 1-WTrasie, 2-Dostarczona, 3-Uszkodzona");
+            System.Console.WriteLine("0 - Nadana, 1 - W Trasie, 2 - Dostarczona, 3 - Uszkodzona");
             int s = (int)ConsoleHelpers.ReadFloat("Status: ");
             if (s >= 0 && s <= 4) _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)s);
             ConsoleHelpers.Pause();
@@ -80,7 +80,7 @@ namespace ProjectApp.Console.UIDictionary
             int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
             if (idx < 0) return;
 
-            System.Console.WriteLine("0-Oplacona, 1-Nieoplacona, 2-PrzyOdbiorze");
+            System.Console.WriteLine("0 - Oplacona, 1 - Nieoplacona, 2 - Płatność Przy Odbiorze");
             int s = (int)ConsoleHelpers.ReadFloat("Status: ");
             if (s >= 0 && s <= 2) _packageService.UpdatePaymentStatus(packs[idx].TrackingNumber, (PaymentStatus)s);
             ConsoleHelpers.Pause();

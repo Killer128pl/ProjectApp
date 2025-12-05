@@ -1,11 +1,11 @@
 ﻿using ProjectApp.Console.Helpers;
+using ProjectApp.Console.UIDictionary;
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
-using ProjectApp.Services;
 using ProjectApp.ServiceAbstractions;
+using ProjectApp.Services;
 using System;
 using System.Linq;
-using ProjectApp.Console.UIDictionary;
 
 namespace ProjectApp.Console.UI
 {
@@ -24,7 +24,7 @@ namespace ProjectApp.Console.UI
             _adminPanel = new AdminMenu(pkg, log, db);
         }
 
-        protected override string Title => "SYSTEM FIRMY KURIERSKIEJ - WITAJ";
+        protected override string Title => "System zarządzania firmą kurierską - Witamy";
 
         protected override Dictionary<char, MenuOption> Options => new()
         {
@@ -37,7 +37,8 @@ namespace ProjectApp.Console.UI
 
         private void RegisterClient()
         {
-            System.Console.WriteLine("--- REJESTRACJA ---");
+            System.Console.Clear();
+            System.Console.WriteLine("--- Rejestracja ---");
             string imie = ConsoleHelpers.ReadString("Podaj imię: ");
             string nazwisko = ConsoleHelpers.ReadString("Podaj nazwisko: ");
 
@@ -50,15 +51,16 @@ namespace ProjectApp.Console.UI
 
         private void RunClientLogin()
         {
+            System.Console.Clear();
             var clients = _db.Clients.ToList();
             if (!clients.Any())
             {
-                System.Console.WriteLine("Brak klientów. Zarejestruj się najpierw (Opcja 4).");
+                System.Console.WriteLine("Brak zarejestrowanych kont. Zarejestruj się (Opcja 4).");
                 ConsoleHelpers.Pause();
                 return;
             }
 
-            System.Console.WriteLine("--- WYBIERZ UŻYTKOWNIKA ---");
+            System.Console.WriteLine("--- Wybierz użytkownika ---");
             for (int i = 0; i < clients.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {clients[i].FirstName} {clients[i].LastName}");
 
@@ -70,10 +72,11 @@ namespace ProjectApp.Console.UI
 
         private void RunWorkerLogin()
         {
+            System.Console.Clear();
             var workers = _db.Workers.ToList();
             if (!workers.Any()) { System.Console.WriteLine("Brak pracowników. Poproś Admina o dodanie konta."); ConsoleHelpers.Pause(); return; }
 
-            System.Console.WriteLine("--- WYBIERZ PRACOWNIKA ---");
+            System.Console.WriteLine("--- Wybierz pracownika ---");
             for (int i = 0; i < workers.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {workers[i].FirstName} {workers[i].LastName} [{workers[i].Position}]");
 
@@ -81,8 +84,11 @@ namespace ProjectApp.Console.UI
             if (idx < 0) return;
 
             var worker = workers[idx];
-            if (worker.Position == "Kurier") new WorkerMenu(_packageSvc, _db, worker).Run();
-            else new WarehouseMenu(_packageSvc, worker).Run();
+
+            if (worker.Position == "Kurier")
+                new WorkerMenu(_packageSvc, _db, worker).Run();
+            else
+                new WarehouseMenu(_packageSvc, worker).Run();
         }
     }
 }
