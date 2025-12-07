@@ -3,6 +3,9 @@ using ProjectApp.Console.UI;
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataAccess.Memory.Repositories;
 using ProjectApp.Services;
+using System.Text;
+
+Console.OutputEncoding = Encoding.UTF8;
 
 
 var db = new MemoryDbContext();

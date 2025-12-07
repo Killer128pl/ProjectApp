@@ -4,19 +4,22 @@ using ProjectApp.Abstractions;
 using ProjectApp.Services;
 using ProjectApp.ServiceAbstractions;
 
-public class InMemoryServicesFixture
+namespace ProjectApp.Test
 {
-    private DataSeeder _dataSeeder;
-    public IPackageService PackageService { get; }
-
-    public InMemoryServicesFixture()
+    public class InMemoryServicesFixture
     {
-        var db = new MemoryDbContext();
+        public IPackageService PackageService { get; }
+        public MemoryDbContext Db { get; }
 
-        IPackageRepository packageRepo = new PackageRepositoryMemory(db);
-        PackageService = new PackageService(packageRepo);
+        public InMemoryServicesFixture()
+        {
+            Db = new MemoryDbContext();
 
-        _dataSeeder = new DataSeeder(PackageService, db);
-        _dataSeeder.Seed();
+            IPackageRepository packageRepo = new PackageRepositoryMemory(Db);
+            PackageService = new PackageService(packageRepo);
+
+            var dataSeeder = new DataSeeder(PackageService, Db);
+            dataSeeder.Seed();
+        }
     }
 }

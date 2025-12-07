@@ -202,7 +202,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6076b4b4b63a3328c998f5bfb655aa1deef36fba")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6bfcb9ad3fc8c98649d65df152bdc0deb643d84b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -580,8 +580,8 @@ namespace ProjectApp.Console.UI
         {
             System.Console.Clear();
             var packs = _packageService.GetPackagesByWorker(_worker.WorkerId)
-                                       .Where(p => p.PackageStatus != PackageStatus.Dostarczona)
-                                       .ToList();
+                        .Where(p => p.PackageStatus != PackageStatus.Dostarczona && p.PackageStatus != PackageStatus.Uszkodzona)
+                        .ToList();
 
             if (!packs.Any())
             {
@@ -925,14 +925,16 @@ namespace ProjectApp.Console.UIDictionary
             float w = ConsoleHelpers.ReadFloat("Waga (kg): ", min: 0.1f);
             string s = ConsoleHelpers.ReadString("Rozmiar: ");
 
-            System.Console.WriteLine("Typ p³atnoœci: 1 - P³atnoœæ ze strony klienta, 2 - Na miejscu, 2 - Przy odbiorze");
+            System.Console.WriteLine("Typ p³atnoœci: 1 - P³atnoœæ ze strony klienta, 2 - Na miejscu, 3 - Przy odbiorze");
             int pType = ConsoleHelpers.ReadInt("Wybierz: ", 1, 3);
-            PaymentStatus pStatus = new PaymentStatus();
+
+            PaymentStatus pStatus;
+
             if (pType == 1)
             {
                 pStatus = PaymentStatus.Nieoplacona;
             }
-            if (pType == 2)
+            else if (pType == 2)
             {
                 pStatus = PaymentStatus.Oplacona;
             }
@@ -1256,7 +1258,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a085e5049ce49dacf4cfa8dbe1c29c502612388")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1336,7 +1338,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a085e5049ce49dacf4cfa8dbe1c29c502612388")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1526,7 +1528,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a085e5049ce49dacf4cfa8dbe1c29c502612388")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1620,7 +1622,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a085e5049ce49dacf4cfa8dbe1c29c502612388")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1817,7 +1819,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6bfcb9ad3fc8c98649d65df152bdc0deb643d84b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1968,7 +1970,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Test")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6bfcb9ad3fc8c98649d65df152bdc0deb643d84b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Test")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Test")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

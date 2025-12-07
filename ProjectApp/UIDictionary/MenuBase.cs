@@ -12,7 +12,7 @@ namespace ProjectApp.Console.UIDictionary
             while (true)
             {
                 System.Console.Clear();
-                System.Console.WriteLine($"=== {Title} ===\n");
+                System.Console.WriteLine($"├────── {Title} ──────┤\n");
 
                 foreach (var kv in Options)
                     System.Console.WriteLine($"{kv.Key}) {kv.Value.Description}");
