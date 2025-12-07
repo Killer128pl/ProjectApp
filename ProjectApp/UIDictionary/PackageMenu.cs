@@ -76,13 +76,34 @@ namespace ProjectApp.Console.UIDictionary
             float w = ConsoleHelpers.ReadFloat("Waga (kg): ", min: 0.1f);
             string s = ConsoleHelpers.ReadString("Rozmiar: ");
 
-            System.Console.WriteLine("Typ płatności: 1 - Płatność z góry (Opłacona), 2 - Przy odbiorze");
-            int pType = ConsoleHelpers.ReadInt("Wybierz: ", 1, 2);
-            PaymentStatus pStatus = pType == 2 ? PaymentStatus.PlatnoscPrzyOdbiorze : PaymentStatus.Oplacona;
+            System.Console.WriteLine("Typ płatności: 1 - Płatność ze strony klienta, 2 - Na miejscu, 3 - Przy odbiorze");
+            int pType = ConsoleHelpers.ReadInt("Wybierz: ", 1, 3);
+
+            PaymentStatus pStatus;
+
+            if (pType == 1)
+            {
+                pStatus = PaymentStatus.Nieoplacona;
+            }
+            else if (pType == 2)
+            {
+                pStatus = PaymentStatus.Oplacona;
+            }
+            else
+            {
+                pStatus = PaymentStatus.PlatnoscPrzyOdbiorze;
+            }
 
             var id = Guid.NewGuid();
             _packageService.CreatePackage(id, clients[cIdx].ClientId, DateTime.Now, w, s, pStatus);
-            System.Console.WriteLine("Utworzono.");
+            if (pType == 1)
+            {
+                System.Console.WriteLine("Utworzono. Paczka do opłacenia w panelu klienta.");
+            }
+            else
+            {
+                System.Console.WriteLine("Utworzono.");
+            }
             ConsoleHelpers.Pause();
         }
 
