@@ -33,14 +33,38 @@ namespace ProjectApp.Console.UIDictionary
 
         private void ShowAllPackages()
         {
+            System.Console.Clear();
             var p = _packageService.GetAll();
-            if (!p.Any()) System.Console.WriteLine("Brak paczek.");
-            foreach (var item in p) System.Console.WriteLine(item);
+            if (!p.Any())
+            {
+                System.Console.WriteLine("Brak paczek.");
+                ConsoleHelpers.Pause();
+                return;
+            }
+
+            foreach (var item in p)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == item.SenderId);
+                string senderInfo = client != null ? $"{client.LastName} {client.FirstName}" : "Nieznany";
+                if (item.PackageStatus == PackageStatus.Dostarczona)
+                {
+                    ConsoleHelpers.WriteDeliveredPackage(item, $"| Nadawca: {senderInfo}");
+                }
+                else if (item.PackageStatus == PackageStatus.Uszkodzona)
+                {
+                    ConsoleHelpers.WriteDestroyedPackage(item, $"| Nadawca: {senderInfo}");
+                }
+                else
+                {
+                    ConsoleHelpers.WriteColoredPackage(item, $"| Nadawca: {senderInfo}");
+                }
+            }
             ConsoleHelpers.Pause();
         }
 
         private void CreatePackage()
         {
+            System.Console.Clear();
             var clients = _db.Clients.ToList();
             if (!clients.Any()) { System.Console.WriteLine("Brak klientów."); ConsoleHelpers.Pause(); return; }
 
@@ -48,41 +72,63 @@ namespace ProjectApp.Console.UIDictionary
                 System.Console.WriteLine($"{i + 1}) {clients[i].FirstName} {clients[i].LastName}");
 
             int cIdx = ConsoleHelpers.ReadIndex("Wybierz nadawcę: ", clients.Count);
-            if (cIdx < 0) return;
 
-            float w = ConsoleHelpers.ReadFloat("Waga (kg): ");
+            float w = ConsoleHelpers.ReadFloat("Waga (kg): ", min: 0.1f);
             string s = ConsoleHelpers.ReadString("Rozmiar: ");
+
+            System.Console.WriteLine("Typ płatności: 1 - Płatność z góry (Opłacona), 2 - Przy odbiorze");
+            int pType = ConsoleHelpers.ReadInt("Wybierz: ", 1, 2);
+            PaymentStatus pStatus = pType == 2 ? PaymentStatus.PlatnoscPrzyOdbiorze : PaymentStatus.Oplacona;
+
             var id = Guid.NewGuid();
-            _packageService.CreatePackage(id, clients[cIdx].ClientId, DateTime.Now, w, s);
+            _packageService.CreatePackage(id, clients[cIdx].ClientId, DateTime.Now, w, s, pStatus);
             System.Console.WriteLine("Utworzono.");
             ConsoleHelpers.Pause();
         }
 
         private void UpdateStatus()
         {
+            System.Console.Clear();
             var packs = _packageService.GetAll().ToList();
             if (!packs.Any()) return;
 
-            for (int i = 0; i < packs.Count; i++) System.Console.WriteLine($"{i + 1}) {packs[i]}");
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string? sender = client != null ? client.LastName : "---";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"[Nadawca: {sender}]");
+            }
+
             int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
-            if (idx < 0) return;
 
             System.Console.WriteLine("0 - Nadana, 1 - W Trasie, 2 - Dostarczona, 3 - Uszkodzona");
-            int s = (int)ConsoleHelpers.ReadFloat("Status: ");
-            if (s >= 0 && s <= 4) _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)s);
+            int st = ConsoleHelpers.ReadInt("Status: ", 0, 3);
+
+            _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)st);
             ConsoleHelpers.Pause();
         }
 
         private void UpdatePaymentStatus()
         {
+            System.Console.Clear();
             var packs = _packageService.GetAll().ToList();
-            for (int i = 0; i < packs.Count; i++) System.Console.WriteLine($"{i + 1}) {packs[i]}");
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string? sender = client != null ? client.LastName : "---";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"[Nadawca: {sender}]");
+            }
+
             int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
-            if (idx < 0) return;
 
             System.Console.WriteLine("0 - Oplacona, 1 - Nieoplacona, 2 - Płatność Przy Odbiorze");
-            int s = (int)ConsoleHelpers.ReadFloat("Status: ");
-            if (s >= 0 && s <= 2) _packageService.UpdatePaymentStatus(packs[idx].TrackingNumber, (PaymentStatus)s);
+            int st = ConsoleHelpers.ReadInt("Status: ", 0, 2);
+
+            _packageService.UpdatePaymentStatus(packs[idx].TrackingNumber, (PaymentStatus)st);
             ConsoleHelpers.Pause();
         }
     }

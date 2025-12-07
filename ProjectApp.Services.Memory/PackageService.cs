@@ -16,7 +16,7 @@ namespace ProjectApp.Services
             _packages = packages;
         }
 
-        public Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size)
+        public Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size, PaymentStatus initialPaymentStatus)
         {
             var package = new Package
             {
@@ -26,7 +26,7 @@ namespace ProjectApp.Services
                 Weight = weight,
                 Size = size,
                 PackageStatus = PackageStatus.Nadana,
-                PaymentStatus = PaymentStatus.Nieoplacona 
+                PaymentStatus = initialPaymentStatus
             };
             _packages.Add(package);
             return package.TrackingNumber;

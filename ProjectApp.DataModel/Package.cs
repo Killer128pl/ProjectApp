@@ -15,12 +15,11 @@ namespace ProjectApp.DataModel
 
         public override string ToString()
         {
-            string payInfo = PaymentStatus == PaymentStatus.Oplacona ? "[OPŁACONA]" : "[NIEOPŁACONA]";
             string statusInfo = PackageStatus.ToString().ToUpper();
 
             if (PackageStatus == PackageStatus.WTrasie) statusInfo = "W TRASIE";
 
-            return $"{payInfo} Nr: {TrackingNumber.ToString().Substring(0, 8)}... | Status: {statusInfo} | Waga: {Weight}kg";
+            return $"Nr: {TrackingNumber.ToString().Substring(0, 8)}... | Status: {statusInfo} | Waga: {Weight}kg";
         }
     }
 }

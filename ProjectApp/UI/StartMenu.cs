@@ -65,7 +65,6 @@ namespace ProjectApp.Console.UI
                 System.Console.WriteLine($"{i + 1}) {clients[i].FirstName} {clients[i].LastName}");
 
             int idx = ConsoleHelpers.ReadIndex("Loguj jako: ", clients.Count);
-            if (idx < 0) return;
 
             new ClientMenu(_packageSvc, clients[idx]).Run();
         }
@@ -81,14 +80,17 @@ namespace ProjectApp.Console.UI
                 System.Console.WriteLine($"{i + 1}) {workers[i].FirstName} {workers[i].LastName} [{workers[i].Position}]");
 
             int idx = ConsoleHelpers.ReadIndex("Loguj jako: ", workers.Count);
-            if (idx < 0) return;
 
             var worker = workers[idx];
 
             if (worker.Position == "Kurier")
+            {
                 new WorkerMenu(_packageSvc, _db, worker).Run();
+            }
             else
-                new WarehouseMenu(_packageSvc, worker).Run();
+            {
+                new WarehouseMenu(_packageSvc, _logisticsSvc, _db, worker).Run();
+            }
         }
     }
 }

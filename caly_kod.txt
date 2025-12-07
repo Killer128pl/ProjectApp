@@ -8,31 +8,49 @@ using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataAccess.Memory.Repositories;
 using ProjectApp.Services;
 
-// 1. Inicjalizacja Bazy i Repozytoriów
+
 var db = new MemoryDbContext();
 IPackageRepository packageRepo = new PackageRepositoryMemory(db);
 
-// 2. Inicjalizacja Serwisów
+
 var packageSvc = new PackageService(packageRepo);
 var logisticsSvc = new LogisticsService(db);
 
-// 3. Seedowanie danych (opcjonalne, ale przydatne)
+
 var seeder = new DataSeeder(packageSvc, db);
 seeder.Seed();
 
-// 4. Uruchomienie Menu G³ównego
-var mainMenu = new MainMenu(packageSvc, logisticsSvc, db);
-mainMenu.Run();
+
+var startMenu = new StartMenu(packageSvc, logisticsSvc, db);
+startMenu.Run();
 
 
 --- PLIK: ConsoleHelpers.cs ---
 
+using System;
 using System.Globalization;
+using ProjectApp.DataModel;
 
 namespace ProjectApp.Console.Helpers
 {
     public static class ConsoleHelpers
     {
+        public static void WriteColoredPackage(Package p, string suffix = "")
+        {
+            var (text, color) = p.PaymentStatus switch
+            {
+                PaymentStatus.Oplacona => ("[OP£ACONA]", ConsoleColor.Green),
+                PaymentStatus.PlatnoscPrzyOdbiorze => ("[PRZY ODBIORZE]", ConsoleColor.Blue),
+                _ => ("[NIEOP£ACONA]", ConsoleColor.Red)
+            };
+
+            System.Console.ForegroundColor = color;
+            System.Console.Write(text + " ");
+            System.Console.ResetColor();
+
+            System.Console.WriteLine(p.ToString() + " " + suffix);
+        }
+
         public static void Pause()
         {
             System.Console.WriteLine();
@@ -42,33 +60,81 @@ namespace ProjectApp.Console.Helpers
 
         public static int ReadIndex(string prompt, int count)
         {
-            System.Console.Write(prompt);
-            var text = System.Console.ReadLine();
+            while (true)
+            {
+                System.Console.Write(prompt);
+                var text = System.Console.ReadLine();
 
-            if (!int.TryParse(text, out int number))
-                return -1;
+                if (int.TryParse(text, out int number) && number >= 1 && number <= count)
+                {
+                    return number - 1;
+                }
 
-            if (number < 1 || number > count)
-                return -1;
-
-            return number - 1;
+                PrintError($"Wybierz liczbê z zakresu 1-{count}.");
+            }
         }
 
-        public static float ReadFloat(string prompt)
+        public static float ReadFloat(string prompt, float min = 0.0f, float max = float.MaxValue)
         {
-            System.Console.Write(prompt);
-            var text = System.Console.ReadLine();
-            if (float.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out float result))
+            float result;
+            while (true)
             {
-                return result;
+                System.Console.Write(prompt);
+                var text = System.Console.ReadLine();
+
+                if (float.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
+                {
+                    if (result > min && result <= max)
+                    {
+                        return result;
+                    }
+                }
+
+                PrintError($"Podaj poprawn¹ liczbê (wiêksz¹ od {min}).");
             }
-            return 0.0f;
+        }
+
+        public static int ReadInt(string prompt, int min, int max)
+        {
+            int result;
+            while (true)
+            {
+                System.Console.Write(prompt);
+                var text = System.Console.ReadLine();
+
+                if (int.TryParse(text, out result))
+                {
+                    if (result >= min && result <= max)
+                    {
+                        return result;
+                    }
+                }
+
+                PrintError($"Podaj liczbê ca³kowit¹ z zakresu {min}-{max}.");
+            }
         }
 
         public static string ReadString(string prompt)
         {
-            System.Console.Write(prompt);
-            return System.Console.ReadLine() ?? string.Empty;
+            while (true)
+            {
+                System.Console.Write(prompt);
+                string? input = System.Console.ReadLine();
+
+                if (!string.IsNullOrWhiteSpace(input))
+                {
+                    return input.Trim();
+                }
+
+                PrintError("To pole nie mo¿e byæ puste. Wpisz wartoœæ.");
+            }
+        }
+
+        private static void PrintError(string msg)
+        {
+            System.Console.ForegroundColor = ConsoleColor.Red;
+            System.Console.WriteLine($" >>> B£¥D: {msg}");
+            System.Console.ResetColor();
         }
     }
 }
@@ -100,7 +166,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Console")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -121,13 +187,415 @@ global using global::System.Threading;
 global using global::System.Threading.Tasks;
 
 
+--- PLIK: AdminMenu.cs ---
+
+using ProjectApp.Console.Helpers;
+using ProjectApp.Console.UIDictionary;
+using ProjectApp.DataAccess.Memory;
+using ProjectApp.DataModel;
+using ProjectApp.ServiceAbstractions;
+using ProjectApp.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectApp.Console.UI
+{
+    public class AdminMenu : MenuBase
+    {
+        private readonly PackageMenu _packageMenu;
+        private readonly LogisticsMenu _logisticsMenu;
+        private readonly MemoryDbContext _db;
+        private readonly IPackageService _packageSvc;
+
+        public AdminMenu(IPackageService packageSvc, LogisticsService logisticsSvc, MemoryDbContext db)
+        {
+            _packageMenu = new PackageMenu(packageSvc, db);
+            _logisticsMenu = new LogisticsMenu(logisticsSvc, db);
+            _db = db;
+            _packageSvc = packageSvc;
+        }
+
+        protected override string Title => "Panel zarz¹dzania firm¹ (Admin)";
+
+        protected override Dictionary<char, MenuOption> Options => new()
+        {
+            ['1'] = new("Zarz¹dzanie magazynem (Paczki)", () => _packageMenu.Run()),
+            ['2'] = new("Logistyka (Flota i Kurierzy)", () => _logisticsMenu.Run()),
+            ['3'] = new("Zarz¹dzanie Kadrami (Dodaj pracownika)", AddWorker),
+            ['4'] = new("Zarz¹dzanie Klientami (Dodaj klienta)", AddClient),
+            ['5'] = new("Raport Dobowy (Ca³y system)", ShowGlobalReport),
+            ['0'] = new("Wyloguj", null),
+        };
+
+        private void AddWorker()
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("--- Nowy pracownik ---");
+
+            string imie = ConsoleHelpers.ReadString("Imiê: ");
+            string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
+
+            System.Console.WriteLine("Stanowisko: 1 - Kurier, 2 - Magazynier");
+            int role = ConsoleHelpers.ReadInt("Wybierz: ", 1, 2);
+            string position = role == 1 ? "Kurier" : "Magazynier";
+
+            _db.Workers.Add(new Worker { FirstName = imie, LastName = nazwisko, Position = position });
+            System.Console.WriteLine($"Dodano pracownika: {imie} {nazwisko} ({position})");
+            ConsoleHelpers.Pause();
+        }
+
+        private void AddClient()
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("--- Nowy klient ---");
+            string imie = ConsoleHelpers.ReadString("Imiê: ");
+            string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
+            _db.Clients.Add(new Client { FirstName = imie, LastName = nazwisko });
+            System.Console.WriteLine("Dodano klienta.");
+            ConsoleHelpers.Pause();
+        }
+
+        private void ShowGlobalReport()
+        {
+            System.Console.Clear();
+            var packages = _packageSvc.GetAll();
+            System.Console.WriteLine($"=== Raport systemowy ===");
+            System.Console.WriteLine($"£¹czna liczba paczek: {packages.Count}");
+            System.Console.WriteLine($"Nadane paczki: {packages.Count(p => p.PackageStatus == PackageStatus.Nadana)}");
+            System.Console.WriteLine($"W trasie: {packages.Count(p => p.PackageStatus == PackageStatus.WTrasie)}");
+            System.Console.WriteLine($"Dostarczone: {packages.Count(p => p.PackageStatus == PackageStatus.Dostarczona)}");
+            System.Console.WriteLine($"Uszkodzone: {packages.Count(p => p.PackageStatus == PackageStatus.Uszkodzona)}");
+
+            System.Console.WriteLine($"\nLiczba klientów: {_db.Clients.Count}");
+            System.Console.WriteLine($"Liczba pracowników: {_db.Workers.Count}");
+            ConsoleHelpers.Pause();
+        }
+    }
+}
+
+
+--- PLIK: ClientMenu.cs ---
+
+using ProjectApp.Console.Helpers;
+using ProjectApp.Console.UIDictionary;
+using ProjectApp.DataModel;
+using ProjectApp.ServiceAbstractions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectApp.Console.UI
+{
+    public class ClientMenu : MenuBase
+    {
+        private readonly IPackageService _packageService;
+        private readonly Client _currentClient;
+
+        public ClientMenu(IPackageService packageService, Client client)
+        {
+            _packageService = packageService;
+            _currentClient = client;
+        }
+
+        protected override string Title => $"Panel klienta: {_currentClient.FirstName} {_currentClient.LastName}";
+
+        protected override Dictionary<char, MenuOption> Options => new()
+        {
+            ['1'] = new("Moje przesy³ki", ShowMyPackages),
+            ['2'] = new("Nadaj paczkê", SendPackage),
+            ['3'] = new("Centrum P³atnoœci", PayForPackages),
+            ['0'] = new("Wyloguj", null),
+        };
+
+        private void ShowMyPackages()
+        {
+            System.Console.Clear();
+            var packages = _packageService.GetPackagesByClient(_currentClient.ClientId);
+            if (!packages.Any()) { System.Console.WriteLine("Brak historii przesy³ek."); ConsoleHelpers.Pause(); return; }
+
+            foreach (var p in packages)
+            {
+                ConsoleHelpers.WriteColoredPackage(p);
+
+                if (p.PackageStatus == PackageStatus.Uszkodzona)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Red;
+                    System.Console.WriteLine("   (!) UWAGA: Paczka uszkodzona. Prosimy zg³osiæ siê po zwrot pieniêdzy.");
+                    System.Console.ResetColor();
+                }
+            }
+            ConsoleHelpers.Pause();
+        }
+
+        private void SendPackage()
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("--- Nowa przesy³ka ---");
+
+            float weight = ConsoleHelpers.ReadFloat("Podaj wagê (kg): ", min: 0.1f);
+            string size = ConsoleHelpers.ReadString("Podaj rozmiar: ");
+
+            System.Console.WriteLine("\nForma p³atnoœci:");
+            System.Console.WriteLine("1. P³acê teraz (Online)");
+            System.Console.WriteLine("2. P³atnoœæ przy odbiorze (Za pobraniem)");
+
+            int payOption = ConsoleHelpers.ReadInt("Twój wybór: ", 1, 2);
+
+            PaymentStatus status = PaymentStatus.Nieoplacona;
+
+            if (payOption == 2)
+            {
+                status = PaymentStatus.PlatnoscPrzyOdbiorze;
+            }
+            else
+            {
+                System.Console.Clear();
+                float cost = weight * 10.0f;
+                bool paid = PaymentSimulator.ProcessPayment(cost);
+                if (paid) status = PaymentStatus.Oplacona;
+                else status = PaymentStatus.Nieoplacona;
+            }
+            System.Console.Clear();
+
+            var id = Guid.NewGuid();
+            _packageService.CreatePackage(id, _currentClient.ClientId, DateTime.Now, weight, size, status);
+
+            System.Console.WriteLine($"\nNadano! Nr: {id}.");
+            ConsoleHelpers.Pause();
+        }
+
+        private void PayForPackages()
+        {
+            System.Console.Clear();
+            var unpaid = _packageService.GetPackagesByClient(_currentClient.ClientId)
+                                        .Where(p => p.PaymentStatus == PaymentStatus.Nieoplacona)
+                                        .ToList();
+
+            if (!unpaid.Any())
+            {
+                System.Console.WriteLine("Wszystkie rachunki uregulowane.");
+                ConsoleHelpers.Pause();
+                return;
+            }
+
+            for (int i = 0; i < unpaid.Count; i++)
+            {
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(unpaid[i], $"Cena: {unpaid[i].Weight * 10:C}");
+            }
+
+            int idx = ConsoleHelpers.ReadIndex("Wybierz paczkê do op³acenia: ", unpaid.Count);
+
+            if (PaymentSimulator.ProcessPayment(unpaid[idx].Weight * 10.0f))
+            {
+                _packageService.UpdatePaymentStatus(unpaid[idx].TrackingNumber, PaymentStatus.Oplacona);
+            }
+        }
+    }
+}
+
+
+--- PLIK: StartMenu.cs ---
+
+using ProjectApp.Console.Helpers;
+using ProjectApp.Console.UIDictionary;
+using ProjectApp.DataAccess.Memory;
+using ProjectApp.DataModel;
+using ProjectApp.ServiceAbstractions;
+using ProjectApp.Services;
+using System;
+using System.Linq;
+
+namespace ProjectApp.Console.UI
+{
+    public class StartMenu : MenuBase
+    {
+        private readonly IPackageService _packageSvc;
+        private readonly LogisticsService _logisticsSvc;
+        private readonly MemoryDbContext _db;
+        private readonly AdminMenu _adminPanel;
+
+        public StartMenu(IPackageService pkg, LogisticsService log, MemoryDbContext db)
+        {
+            _packageSvc = pkg;
+            _logisticsSvc = log;
+            _db = db;
+            _adminPanel = new AdminMenu(pkg, log, db);
+        }
+
+        protected override string Title => "System zarz¹dzania firm¹ kuriersk¹ - Witamy";
+
+        protected override Dictionary<char, MenuOption> Options => new()
+        {
+            ['1'] = new("Zaloguj: Administrator", () => _adminPanel.Run()),
+            ['2'] = new("Zaloguj: Klient", RunClientLogin),
+            ['3'] = new("Zaloguj: Pracownik", RunWorkerLogin),
+            ['4'] = new("Zarejestruj nowe konto klienta", RegisterClient),
+            ['0'] = new("Wyjœcie", null)
+        };
+
+        private void RegisterClient()
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("--- Rejestracja ---");
+            string imie = ConsoleHelpers.ReadString("Podaj imiê: ");
+            string nazwisko = ConsoleHelpers.ReadString("Podaj nazwisko: ");
+
+            var newClient = new Client { FirstName = imie, LastName = nazwisko };
+            _db.Clients.Add(newClient);
+
+            System.Console.WriteLine($"\nKonto utworzone! Witaj {imie}. Mo¿esz siê teraz zalogowaæ.");
+            ConsoleHelpers.Pause();
+        }
+
+        private void RunClientLogin()
+        {
+            System.Console.Clear();
+            var clients = _db.Clients.ToList();
+            if (!clients.Any())
+            {
+                System.Console.WriteLine("Brak zarejestrowanych kont. Zarejestruj siê (Opcja 4).");
+                ConsoleHelpers.Pause();
+                return;
+            }
+
+            System.Console.WriteLine("--- Wybierz u¿ytkownika ---");
+            for (int i = 0; i < clients.Count; i++)
+                System.Console.WriteLine($"{i + 1}) {clients[i].FirstName} {clients[i].LastName}");
+
+            int idx = ConsoleHelpers.ReadIndex("Loguj jako: ", clients.Count);
+
+            new ClientMenu(_packageSvc, clients[idx]).Run();
+        }
+
+        private void RunWorkerLogin()
+        {
+            System.Console.Clear();
+            var workers = _db.Workers.ToList();
+            if (!workers.Any()) { System.Console.WriteLine("Brak pracowników. Poproœ Admina o dodanie konta."); ConsoleHelpers.Pause(); return; }
+
+            System.Console.WriteLine("--- Wybierz pracownika ---");
+            for (int i = 0; i < workers.Count; i++)
+                System.Console.WriteLine($"{i + 1}) {workers[i].FirstName} {workers[i].LastName} [{workers[i].Position}]");
+
+            int idx = ConsoleHelpers.ReadIndex("Loguj jako: ", workers.Count);
+
+            var worker = workers[idx];
+
+            if (worker.Position == "Kurier")
+            {
+                new WorkerMenu(_packageSvc, _db, worker).Run();
+            }
+            else
+            {
+                new WarehouseMenu(_packageSvc, _logisticsSvc, _db, worker).Run();
+            }
+        }
+    }
+}
+
+
+--- PLIK: WorkerMenu.cs ---
+
+using ProjectApp.Console.Helpers;
+using ProjectApp.DataAccess.Memory;
+using ProjectApp.DataModel;
+using ProjectApp.ServiceAbstractions;
+using System.Linq;
+using System.Collections.Generic;
+using ProjectApp.Console.UIDictionary;
+
+namespace ProjectApp.Console.UI
+{
+    public class WorkerMenu : MenuBase
+    {
+        private readonly IPackageService _packageService;
+        private readonly MemoryDbContext _db;
+        private readonly Worker _worker;
+
+        public WorkerMenu(IPackageService packageService, MemoryDbContext db, Worker worker)
+        {
+            _packageService = packageService;
+            _db = db;
+            _worker = worker;
+        }
+
+        protected override string Title => $"Kurier: {_worker.LastName}";
+
+        protected override Dictionary<char, MenuOption> Options => new()
+        {
+            ['1'] = new("Mój Pojazd", ShowMyVehicle),
+            ['2'] = new("Moje Zlecenia", ShowMyPackages),
+            ['3'] = new("Zg³oœ dostarczenie/problem", UpdateStatus),
+            ['0'] = new("Wyloguj", null),
+        };
+
+        private void ShowMyVehicle()
+        {
+            System.Console.Clear();
+            var v = _db.Vehicles.FirstOrDefault(x => x.VehicleId == _worker.AssignedVehicleId);
+            if (v == null) System.Console.WriteLine("Brak auta.");
+            else System.Console.WriteLine($"{v.Brand} {v.Model} ({v.RegNumber})");
+            ConsoleHelpers.Pause();
+        }
+
+        private void ShowMyPackages()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetPackagesByWorker(_worker.WorkerId);
+            if (!packs.Any())
+            {
+                System.Console.WriteLine("Brak zleceñ.");
+                ConsoleHelpers.Pause();
+                return;
+            }
+
+            foreach (var p in packs)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == p.SenderId);
+                string sender = client != null ? $"{client.LastName} {client.FirstName}" : "Brak danych";
+
+                ConsoleHelpers.WriteColoredPackage(p);
+                System.Console.WriteLine($"   -> Odbiór od: {sender}");
+            }
+            ConsoleHelpers.Pause();
+        }
+
+        private void UpdateStatus()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetPackagesByWorker(_worker.WorkerId).ToList();
+            if (!packs.Any()) { System.Console.WriteLine("Pusto."); ConsoleHelpers.Pause(); return; }
+
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string sender = client != null ? client.LastName : "";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"({sender})");
+            }
+
+            int idx = ConsoleHelpers.ReadIndex("Paczka: ", packs.Count);
+            if (idx < 0) return;
+
+            System.Console.WriteLine("2 - Dostarczona, 3 - Uszkodzona");
+            int s = (int)ConsoleHelpers.ReadFloat("Status: ");
+            if (s >= 2 && s <= 4) _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)s);
+            ConsoleHelpers.Pause();
+        }
+    }
+}
+
+
 --- PLIK: LogisticsMenu.cs ---
 
 using ProjectApp.Console.Helpers;
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.Services;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public class LogisticsMenu : MenuBase
     {
@@ -140,7 +608,7 @@ namespace ProjectApp.Console.UI
             _db = db;
         }
 
-        protected override string Title => "LOGISTYKA I FLOTA";
+        protected override string Title => "Logistyka i flota";
         protected override Dictionary<char, MenuOption> Options => new()
         {
             ['1'] = new("Poka¿ pracowników", ShowWorkers),
@@ -152,10 +620,11 @@ namespace ProjectApp.Console.UI
 
         private void ShowWorkers()
         {
+            System.Console.Clear();
             if (!_db.Workers.Any()) System.Console.WriteLine("Brak pracowników.");
             foreach (var w in _db.Workers)
             {
-                string autoInfo = w.AssignedVehicleId.HasValue ? $"AutoID: {w.AssignedVehicleId}" : "BRAK AUTA";
+                string autoInfo = w.AssignedVehicleId.HasValue ? $"AutoID: {w.AssignedVehicleId}" : "Brak auta";
                 System.Console.WriteLine($"{w.FirstName} {w.LastName} [{w.Position}] - {autoInfo}");
             }
             ConsoleHelpers.Pause();
@@ -163,6 +632,7 @@ namespace ProjectApp.Console.UI
 
         private void ShowVehicles()
         {
+            System.Console.Clear();
             if (!_db.Vehicles.Any()) System.Console.WriteLine("Brak pojazdów.");
             foreach (var v in _db.Vehicles)
             {
@@ -173,6 +643,7 @@ namespace ProjectApp.Console.UI
 
         private void AssignVehicle()
         {
+            System.Console.Clear();
             var workers = _db.Workers.ToList();
             var vehicles = _db.Vehicles.ToList();
 
@@ -183,14 +654,14 @@ namespace ProjectApp.Console.UI
                 return;
             }
 
-            System.Console.WriteLine("--- PRACOWNICY ---");
+            System.Console.WriteLine("--- Pracownicy ---");
             for (int i = 0; i < workers.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {workers[i].LastName} ({workers[i].Position})");
 
             int wIdx = ConsoleHelpers.ReadIndex("Wybierz pracownika: ", workers.Count);
             if (wIdx < 0) return;
 
-            System.Console.WriteLine("\n--- POJAZDY ---");
+            System.Console.WriteLine("\n--- Pojazdy ---");
             for (int i = 0; i < vehicles.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {vehicles[i].Brand} {vehicles[i].Model} [{vehicles[i].VehicleStatus}]");
 
@@ -204,7 +675,8 @@ namespace ProjectApp.Console.UI
 
         private void AssignPackage()
         {
-            var packages = _db.Packages.Where(p => p.PackageStatus == DataModel.PackageStatus.Sent).ToList();
+            System.Console.Clear();
+            var packages = _db.Packages.Where(p => p.PackageStatus == DataModel.PackageStatus.Nadana).ToList();
             var couriers = _db.Workers.Where(w => w.Position == "Kurier").ToList();
 
             if (!packages.Any())
@@ -220,17 +692,17 @@ namespace ProjectApp.Console.UI
                 return;
             }
 
-            System.Console.WriteLine("--- PACZKI (SENT) ---");
+            System.Console.WriteLine("--- Nadane Paczki ---");
             for (int i = 0; i < packages.Count; i++)
                 System.Console.WriteLine($"{i + 1}) {packages[i].TrackingNumber} ({packages[i].Weight}kg)");
 
             int pIdx = ConsoleHelpers.ReadIndex("Wybierz paczkê: ", packages.Count);
             if (pIdx < 0) return;
 
-            System.Console.WriteLine("\n--- KURIERZY ---");
+            System.Console.WriteLine("\n--- Kurierzy ---");
             for (int i = 0; i < couriers.Count; i++)
             {
-                string auto = couriers[i].AssignedVehicleId.HasValue ? "MA AUTO" : "PIESZY";
+                string auto = couriers[i].AssignedVehicleId.HasValue ? "Ma przypisane auto" : "Pieszy";
                 System.Console.WriteLine($"{i + 1}) {couriers[i].LastName} [{auto}]");
             }
 
@@ -245,41 +717,11 @@ namespace ProjectApp.Console.UI
 }
 
 
---- PLIK: MainMenu.cs ---
-
-using ProjectApp.DataAccess.Memory;
-using ProjectApp.ServiceAbstractions;
-using ProjectApp.Services;
-
-namespace ProjectApp.Console.UI
-{
-    public class MainMenu : MenuBase
-    {
-        private readonly PackageMenu _packageMenu;
-        private readonly LogisticsMenu _logisticsMenu;
-
-        public MainMenu(IPackageService packageSvc, LogisticsService logisticsSvc, MemoryDbContext db)
-        {
-            _packageMenu = new PackageMenu(packageSvc);
-            _logisticsMenu = new LogisticsMenu(logisticsSvc, db);
-        }
-
-        protected override string Title => "SYSTEM LOGISTYCZNY - MENU G£ÓWNE";
-        protected override Dictionary<char, MenuOption> Options => new()
-        {
-            ['1'] = new("Obs³uga Paczek", () => _packageMenu.Run()),
-            ['2'] = new("Logistyka (Flota i Kurierzy)", () => _logisticsMenu.Run()),
-            ['0'] = new("Wyjœcie z systemu", null),
-        };
-    }
-}
-
-
 --- PLIK: MenuBase.cs ---
 
 using ProjectApp.Console.Helpers;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public abstract class MenuBase
     {
@@ -320,7 +762,7 @@ namespace ProjectApp.Console.UI
 
 --- PLIK: MenuOption.cs ---
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public record MenuOption(string Description, Action? Action);
 }
@@ -330,88 +772,323 @@ namespace ProjectApp.Console.UI
 
 using ProjectApp.Abstractions;
 using ProjectApp.Console.Helpers;
+using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
-namespace ProjectApp.Console.UI
+namespace ProjectApp.Console.UIDictionary
 {
     public class PackageMenu : MenuBase
     {
         private readonly IPackageService _packageService;
+        private readonly MemoryDbContext _db;
 
-        public PackageMenu(IPackageService packageService)
+        public PackageMenu(IPackageService packageService, MemoryDbContext db)
         {
             _packageService = packageService;
+            _db = db;
         }
 
-        protected override string Title => "ZARZ¥DZANIE PACZKAMI";
+        protected override string Title => "Panel zarz¹dzania paczkami (Admin)";
+
         protected override Dictionary<char, MenuOption> Options => new()
         {
             ['1'] = new("Lista wszystkich paczek", ShowAllPackages),
-            ['2'] = new("Nadaj now¹ paczkê", CreatePackage),
-            ['3'] = new("Zmieñ status paczki", UpdateStatus),
+            ['2'] = new("Nadaj paczkê (dla Klienta)", CreatePackage),
+            ['3'] = new("Zmieñ status (Logistyka)", UpdateStatus),
+            ['4'] = new("Zmieñ status p³atnoœci", UpdatePaymentStatus),
             ['0'] = new("Powrót", null),
         };
 
         private void ShowAllPackages()
         {
-            var packages = _packageService.GetAll();
-            if (!packages.Any())
-            {
-                System.Console.WriteLine("Brak paczek w systemie.");
-                ConsoleHelpers.Pause();
-                return;
-            }
-
-            foreach (var p in packages)
-            {
-                System.Console.WriteLine(p.ToString());
-            }
-            ConsoleHelpers.Pause();
-        }
-
-        private void CreatePackage()
-        {
-            float weight = ConsoleHelpers.ReadFloat("Podaj wagê (kg): ");
-            string size = ConsoleHelpers.ReadString("Podaj rozmiar (Small/Medium/Big): ");
-
-            var id = Guid.NewGuid();
-            _packageService.CreatePackage(id, DateTime.Now, weight, size);
-
-            System.Console.WriteLine($"Paczka nadana! Numer œledzenia: {id}");
-            ConsoleHelpers.Pause();
-        }
-
-        private void UpdateStatus()
-        {
-            var packages = _packageService.GetAll().ToList();
-            if (!packages.Any())
+            System.Console.Clear();
+            var p = _packageService.GetAll();
+            if (!p.Any())
             {
                 System.Console.WriteLine("Brak paczek.");
                 ConsoleHelpers.Pause();
                 return;
             }
 
-            for (int i = 0; i < packages.Count; i++)
+            foreach (var item in p)
             {
-                System.Console.WriteLine($"{i + 1}) {packages[i]}");
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == item.SenderId);
+                string senderInfo = client != null ? $"{client.LastName} {client.FirstName}" : "Nieznany";
+                ConsoleHelpers.WriteColoredPackage(item, $"| Nadawca: {senderInfo}");
+            }
+            ConsoleHelpers.Pause();
+        }
+
+        private void CreatePackage()
+        {
+            System.Console.Clear();
+            var clients = _db.Clients.ToList();
+            if (!clients.Any()) { System.Console.WriteLine("Brak klientów."); ConsoleHelpers.Pause(); return; }
+
+            for (int i = 0; i < clients.Count; i++)
+                System.Console.WriteLine($"{i + 1}) {clients[i].FirstName} {clients[i].LastName}");
+
+            int cIdx = ConsoleHelpers.ReadIndex("Wybierz nadawcê: ", clients.Count);
+
+            float w = ConsoleHelpers.ReadFloat("Waga (kg): ", min: 0.1f);
+            string s = ConsoleHelpers.ReadString("Rozmiar: ");
+
+            System.Console.WriteLine("Typ p³atnoœci: 1 - P³atnoœæ z góry (Op³acona), 2 - Przy odbiorze");
+            int pType = ConsoleHelpers.ReadInt("Wybierz: ", 1, 2);
+            PaymentStatus pStatus = pType == 2 ? PaymentStatus.PlatnoscPrzyOdbiorze : PaymentStatus.Oplacona;
+
+            var id = Guid.NewGuid();
+            _packageService.CreatePackage(id, clients[cIdx].ClientId, DateTime.Now, w, s, pStatus);
+            System.Console.WriteLine("Utworzono.");
+            ConsoleHelpers.Pause();
+        }
+
+        private void UpdateStatus()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetAll().ToList();
+            if (!packs.Any()) return;
+
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string sender = client != null ? client.LastName : "---";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"[Nadawca: {sender}]");
             }
 
-            int idx = ConsoleHelpers.ReadIndex($"Wybierz paczkê (1..{packages.Count}): ", packages.Count);
+            int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
+
+            System.Console.WriteLine("0 - Nadana, 1 - W Trasie, 2 - Dostarczona, 3 - Uszkodzona");
+            int st = ConsoleHelpers.ReadInt("Status: ", 0, 3);
+
+            _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, (PackageStatus)st);
+            ConsoleHelpers.Pause();
+        }
+
+        private void UpdatePaymentStatus()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetAll().ToList();
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string sender = client != null ? client.LastName : "---";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"[Nadawca: {sender}]");
+            }
+
+            int idx = ConsoleHelpers.ReadIndex("Wybierz: ", packs.Count);
+
+            System.Console.WriteLine("0 - Oplacona, 1 - Nieoplacona, 2 - P³atnoœæ Przy Odbiorze");
+            int st = ConsoleHelpers.ReadInt("Status: ", 0, 2);
+
+            _packageService.UpdatePaymentStatus(packs[idx].TrackingNumber, (PaymentStatus)st);
+            ConsoleHelpers.Pause();
+        }
+    }
+}
+
+
+--- PLIK: PaymentSimulator.cs ---
+
+using ProjectApp.Console.Helpers;
+using System;
+using System.Threading;
+
+namespace ProjectApp.Console.UIDictionary
+{
+    public static class PaymentSimulator
+    {
+        public static bool ProcessPayment(float amount)
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("========================================");
+            System.Console.WriteLine("          BRAMKA P£ATNOŒCI 2.0          ");
+            System.Console.WriteLine("========================================");
+            System.Console.WriteLine($"Kwota do zap³aty: {amount:C2}");
+            System.Console.WriteLine("\nWybierz metodê p³atnoœci:");
+            System.Console.WriteLine("1. BLIK");
+            System.Console.WriteLine("2. Karta Kredytowa");
+            System.Console.WriteLine("3. Przelew Tradycyjny");
+            System.Console.WriteLine("0. Anuluj");
+
+            System.Console.Write("\nWybór: ");
+            var key = System.Console.ReadKey(true);
+
+            if (key.KeyChar == '0') return false;
+
+            System.Console.WriteLine("\n\n£¹czenie z bankiem...");
+            for (int i = 0; i < 8; i++)
+            {
+                System.Console.Write("-");
+                Thread.Sleep(300);
+            }
+
+            System.Console.ForegroundColor = ConsoleColor.Green;
+            System.Console.WriteLine("\n\nP£ATNOŒÆ ZAAKCEPTOWANA!");
+            System.Console.ResetColor();
+            System.Console.WriteLine("Dziêkujemy za skorzystanie z us³ug.");
+
+            ConsoleHelpers.Pause();
+            return true;
+        }
+    }
+}
+
+
+--- PLIK: StorageMenu.cs ---
+
+using ProjectApp.Console.Helpers;
+using ProjectApp.DataAccess.Memory;
+using ProjectApp.DataModel;
+using ProjectApp.ServiceAbstractions;
+using ProjectApp.Services;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectApp.Console.UIDictionary
+{
+    public class WarehouseMenu : MenuBase
+    {
+        private readonly IPackageService _packageService;
+        private readonly LogisticsService _logisticsService;
+        private readonly MemoryDbContext _db;
+        private readonly Worker _worker;
+
+        public WarehouseMenu(IPackageService packageService, LogisticsService logisticsService, MemoryDbContext db, Worker worker)
+        {
+            _packageService = packageService;
+            _logisticsService = logisticsService;
+            _db = db;
+            _worker = worker;
+        }
+
+        protected override string Title => $"Magazyn: {_worker.LastName}";
+
+        protected override Dictionary<char, MenuOption> Options => new()
+        {
+            ['1'] = new("Oczekuj¹ce na wydanie (Nadane)", ShowPending),
+            ['2'] = new("Magazyn Uszkodzeñ", ShowDamaged),
+            ['3'] = new("Zg³oœ uszkodzenie", ReportDamage),
+            ['4'] = new("Wydaj paczkê kurierowi", AssignPackageToCourier),
+            ['0'] = new("Wyloguj", null),
+        };
+
+        private void ShowPending()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetAll().Where(p => p.PackageStatus == PackageStatus.Nadana);
+            if (!packs.Any())
+            {
+                System.Console.WriteLine("Brak.");
+                ConsoleHelpers.Pause();
+                return;
+            }
+
+            foreach (var p in packs)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == p.SenderId);
+                string sender = client != null ? $"{client.LastName} {client.FirstName}" : "Nieznany";
+
+                ConsoleHelpers.WriteColoredPackage(p, $"| Od: {sender}");
+            }
+            ConsoleHelpers.Pause();
+        }
+
+        private void ShowDamaged()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetAll().Where(p => p.PackageStatus == PackageStatus.Uszkodzona);
+            if (!packs.Any()) { System.Console.WriteLine("Brak."); ConsoleHelpers.Pause(); return; }
+
+            foreach (var p in packs)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == p.SenderId);
+                string sender = client != null ? client.LastName : "";
+                ConsoleHelpers.WriteColoredPackage(p, $"({sender})");
+            }
+            ConsoleHelpers.Pause();
+        }
+
+        private void ReportDamage()
+        {
+            System.Console.Clear();
+            var packs = _packageService.GetAll().Where(p => p.PackageStatus == PackageStatus.Nadana).ToList();
+            if (!packs.Any()) return;
+
+            for (int i = 0; i < packs.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packs[i].SenderId);
+                string sender = client != null ? client.LastName : "";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packs[i], $"[{sender}]");
+            }
+
+            int idx = ConsoleHelpers.ReadIndex("Uszkodzona paczka: ", packs.Count);
             if (idx < 0) return;
 
-            System.Console.WriteLine("Dostêpne statusy: 0-Sent, 1-InTransit, 2-Delivered, 3-Damaged");
-            int statusInt = (int)ConsoleHelpers.ReadFloat("Podaj numer statusu: ");
+            _packageService.UpdatePackageStatus(packs[idx].TrackingNumber, PackageStatus.Uszkodzona);
+            System.Console.WriteLine("Zg³oszono uszkodzenie.");
+            ConsoleHelpers.Pause();
+        }
 
-            if (statusInt >= 0 && statusInt <= 3)
+        private void AssignPackageToCourier()
+        {
+            System.Console.Clear();
+            System.Console.WriteLine("--- WYDANIE PACZKI KURIEROWI ---");
+
+            var packages = _packageService.GetAll().Where(p => p.PackageStatus == PackageStatus.Nadana).ToList();
+            var couriers = _db.Workers.Where(w => w.Position == "Kurier").ToList();
+
+            if (!packages.Any())
             {
-                _packageService.UpdatePackageStatus(packages[idx].TrackingNumber, (PackageStatus)statusInt);
-                System.Console.WriteLine("Status zaktualizowany.");
+                System.Console.WriteLine("Brak paczek do wydania (Nadanych).");
+                ConsoleHelpers.Pause();
+                return;
             }
-            else
+            if (!couriers.Any())
             {
-                System.Console.WriteLine("Niepoprawny status.");
+                System.Console.WriteLine("Brak kurierów w systemie.");
+                ConsoleHelpers.Pause();
+                return;
             }
+
+            System.Console.WriteLine("PACZKI:");
+            System.Console.Clear();
+            for (int i = 0; i < packages.Count; i++)
+            {
+                var client = _db.Clients.FirstOrDefault(c => c.ClientId == packages[i].SenderId);
+                string sender = client != null ? client.LastName : "---";
+
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(packages[i], $"[Nadawca: {sender}]");
+            }
+
+            int pIdx = ConsoleHelpers.ReadIndex("Wybierz paczkê: ", packages.Count);
+            if (pIdx < 0) return;
+
+            System.Console.WriteLine("\nKURIERZY:");
+            for (int i = 0; i < couriers.Count; i++)
+            {
+                string auto = couriers[i].AssignedVehicleId.HasValue ? "[Auto]" : "[Pieszy]";
+                System.Console.WriteLine($"{i + 1}) {couriers[i].LastName} {couriers[i].FirstName} {auto}");
+            }
+            int cIdx = ConsoleHelpers.ReadIndex("Wybierz kuriera: ", couriers.Count);
+            if (cIdx < 0) return;
+
+            bool success = _logisticsService.AssignPackageToCourier(packages[pIdx].TrackingNumber, couriers[cIdx].WorkerId);
+
+            if (success) System.Console.WriteLine("Sukces! Paczka przekazana kurierowi.");
+            else System.Console.WriteLine("B³¹d! Kurier prawdopodobnie nie ma auta.");
+
             ConsoleHelpers.Pause();
         }
     }
@@ -472,7 +1149,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Abstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -552,7 +1229,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.DataAccess.Memory")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -612,21 +1289,28 @@ namespace ProjectApp.DataModel
 
 --- PLIK: Package.cs ---
 
+using System;
+
 namespace ProjectApp.DataModel
 {
     public class Package
     {
         public Guid TrackingNumber { get; set; }
+        public Guid SenderId { get; set; }
         public DateTime SentDate { get; set; }
         public float Weight { get; set; }
         public string? Size { get; set; }
         public PackageStatus PackageStatus { get; set; }
-        public PaymentStatus PaymentStatus { get; set; }
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Nieoplacona;
         public Guid? AssignedWorkerId { get; set; }
 
         public override string ToString()
         {
-            return $"Numer: {TrackingNumber} | Status: {PackageStatus} | Waga: {Weight}kg | KurierID: {(AssignedWorkerId.HasValue ? AssignedWorkerId.ToString() : "Brak")}";
+            string statusInfo = PackageStatus.ToString().ToUpper();
+
+            if (PackageStatus == PackageStatus.WTrasie) statusInfo = "W TRASIE";
+
+            return $"Nr: {TrackingNumber.ToString().Substring(0, 8)}... | Status: {statusInfo} | Waga: {Weight}kg";
         }
     }
 }
@@ -653,17 +1337,17 @@ namespace ProjectApp.DataModel
 {
     public enum PackageStatus
     {
-        Sent,
-        InTransit,
-        Delivered,
-        Damaged
+        Nadana,        
+        WTrasie,        
+        Dostarczona,   
+        Uszkodzona     
     }
 
     public enum PaymentStatus
     {
-        Paid,
-        NotPaid,
-        OnDeliveryPayment
+        Oplacona,           
+        Nieoplacona,        
+        PlatnoscPrzyOdbiorze 
     }
 }
 
@@ -735,7 +1419,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.DataModel")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -782,20 +1466,23 @@ namespace ProjectApp.ServiceAbstractions
 --- PLIK: IPackageService.cs ---
 
 using ProjectApp.DataModel;
+using System;
+using System.Collections.Generic;
 
 namespace ProjectApp.ServiceAbstractions
 {
     public interface IPackageService
     {
         bool UpdatePackageStatus(Guid trackingNumber, PackageStatus status);
-
         bool UpdatePaymentStatus(Guid trackingNumber, PaymentStatus status);
 
-        public Guid CreatePackage(Guid trackingNumber, DateTime sentDate, float weight, string size);
+        Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size, PaymentStatus initialPaymentStatus);
 
         IReadOnlyList<Package> GetAll();
-
         IEnumerable<Package> Search(Guid trackingNumber);
+
+        IEnumerable<Package> GetPackagesByClient(Guid clientId);
+        IEnumerable<Package> GetPackagesByWorker(Guid workerId);
     }
 }
 
@@ -826,7 +1513,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.ServiceAbstractions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -852,6 +1539,7 @@ global using global::System.Threading.Tasks;
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
+using System;
 
 namespace ProjectApp.Services
 {
@@ -868,12 +1556,19 @@ namespace ProjectApp.Services
 
         public SeedResult Seed()
         {
-            var pckg1 = _packageService.CreatePackage(Guid.NewGuid(), DateTime.Now, 2.5f, "Big");
-            var pckg2 = _packageService.CreatePackage(Guid.Parse("21372137-2137-2137-2137-213721372137"), DateTime.Now.AddDays(-1), 1.0f, "Small");
-            var pckg3 = _packageService.CreatePackage(Guid.NewGuid(), DateTime.Now.AddDays(-2), 5.0f, "Huge");
+            // Przyk³adowy klient
+            var client = new Client { FirstName = "Jan", LastName = "Kowalski", ClientId = Guid.NewGuid() };
+            _db.Clients.Add(client);
 
-            _db.Vehicles.Add(new Vehicle { Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Available" });
-            _db.Workers.Add(new Worker { FirstName = "Jan", LastName = "Kowalski", Position = "Kurier" });
+            var pckg1 = _packageService.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now, 2.5f, "Œrednia", PaymentStatus.Nieoplacona);
+            var pckg2 = _packageService.CreatePackage(Guid.Parse("21372137-2137-2137-2137-213721372137"), client.ClientId, DateTime.Now.AddDays(-1), 1.0f, "Ma³a", PaymentStatus.Oplacona);
+            var pckg3 = _packageService.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now.AddDays(-2), 5.0f, "Du¿a", PaymentStatus.PlatnoscPrzyOdbiorze);
+
+            // Flota i Kadra
+            _db.Vehicles.Add(new Vehicle { Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Dostêpny" });
+            _db.Vehicles.Add(new Vehicle { Brand = "Iveco", Model = "Daily", RegNumber = "ID 31245", VehicleStatus = "Dostêpny" });
+
+            _db.Workers.Add(new Worker { FirstName = "Piotr", LastName = "Szybki", Position = "Kurier" });
             _db.Workers.Add(new Worker { FirstName = "Adam", LastName = "Nowak", Position = "Magazynier" });
 
             return new SeedResult { pckg1 = pckg1, pckg2 = pckg2, pckg3 = pckg3 };
@@ -886,17 +1581,15 @@ namespace ProjectApp.Services
 
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
+using System;
+using System.Linq;
 
 namespace ProjectApp.Services
 {
     public class LogisticsService
     {
         private readonly MemoryDbContext _db;
-
-        public LogisticsService(MemoryDbContext db)
-        {
-            _db = db;
-        }
+        public LogisticsService(MemoryDbContext db) => _db = db;
 
         public bool AssignVehicleToWorker(Guid workerId, Guid vehicleId)
         {
@@ -904,12 +1597,10 @@ namespace ProjectApp.Services
             var vehicle = _db.Vehicles.FirstOrDefault(v => v.VehicleId == vehicleId);
 
             if (worker == null || vehicle == null) return false;
-
-            if (vehicle.VehicleStatus != "Available") return false;
+            if (vehicle.VehicleStatus != "Dostêpny") return false;
 
             worker.AssignedVehicleId = vehicle.VehicleId;
-            vehicle.VehicleStatus = "InUse";
-
+            vehicle.VehicleStatus = "Zajêty";
             return true;
         }
 
@@ -919,11 +1610,10 @@ namespace ProjectApp.Services
             var worker = _db.Workers.FirstOrDefault(w => w.WorkerId == workerId);
 
             if (package == null || worker == null) return false;
-
             if (worker.Position != "Kurier" || worker.AssignedVehicleId == null) return false;
 
             package.AssignedWorkerId = worker.WorkerId;
-            package.PackageStatus = PackageStatus.InTransit;
+            package.PackageStatus = PackageStatus.WTrasie;
 
             return true;
         }
@@ -936,6 +1626,9 @@ namespace ProjectApp.Services
 using ProjectApp.Abstractions;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectApp.Services
 {
@@ -948,35 +1641,29 @@ namespace ProjectApp.Services
             _packages = packages;
         }
 
-        public Guid CreatePackage(Guid trackingNumber, DateTime sentDate, float weight, string size)
+        public Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size, PaymentStatus initialPaymentStatus)
         {
             var package = new Package
             {
                 TrackingNumber = trackingNumber,
+                SenderId = senderId,
                 SentDate = sentDate,
                 Weight = weight,
                 Size = size,
-                PackageStatus = PackageStatus.Sent
+                PackageStatus = PackageStatus.Nadana,
+                PaymentStatus = initialPaymentStatus
             };
-
             _packages.Add(package);
             return package.TrackingNumber;
         }
 
-        public IReadOnlyList<Package> GetAll()
-        {
-            return _packages.Query().OrderBy(m => m.SentDate).ToList();
-        }
+        public IReadOnlyList<Package> GetAll() => _packages.Query().OrderBy(m => m.SentDate).ToList();
 
-        public IEnumerable<Package> Search(Guid trackingNumber)
-        {
-            return _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
-        }
+        public IEnumerable<Package> Search(Guid trackingNumber) => _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
 
-        public Package? Get(Guid trackingNumber)
-        {
-            return _packages.Get(trackingNumber);
-        }
+        public IEnumerable<Package> GetPackagesByClient(Guid clientId) => _packages.GetAll().Where(p => p.SenderId == clientId);
+
+        public IEnumerable<Package> GetPackagesByWorker(Guid workerId) => _packages.GetAll().Where(p => p.AssignedWorkerId == workerId);
 
         public bool UpdatePackageStatus(Guid trackingNumber, PackageStatus status)
         {
@@ -1023,7 +1710,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dfd37cca8f89b7f0c29302598dee5af146fee6b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Services")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -1062,8 +1749,9 @@ public class InMemoryServicesFixture
         var db = new MemoryDbContext();
 
         IPackageRepository packageRepo = new PackageRepositoryMemory(db);
+        PackageService = new PackageService(packageRepo);
 
-        _dataSeeder = new DataSeeder(PackageService);
+        _dataSeeder = new DataSeeder(PackageService, db);
         _dataSeeder.Seed();
     }
 }
@@ -1074,6 +1762,7 @@ public class InMemoryServicesFixture
 using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
 using ProjectApp.Services;
+using System;
 using Xunit;
 
 public class LogisticsServiceTests
@@ -1085,7 +1774,8 @@ public class LogisticsServiceTests
         var service = new LogisticsService(db);
 
         var worker = new Worker { WorkerId = Guid.NewGuid(), Position = "Kurier" };
-        var package = new Package { TrackingNumber = Guid.NewGuid(), PackageStatus = PackageStatus.Sent };
+
+        var package = new Package { TrackingNumber = Guid.NewGuid(), PackageStatus = PackageStatus.Nadana };
 
         db.Workers.Add(worker);
         db.Packages.Add(package);
@@ -1093,7 +1783,7 @@ public class LogisticsServiceTests
         var result = service.AssignPackageToCourier(package.TrackingNumber, worker.WorkerId);
 
         Assert.False(result);
-        Assert.Equal(PackageStatus.Sent, package.PackageStatus);
+        Assert.Equal(PackageStatus.Nadana, package.PackageStatus);
     }
 
     [Fact]
@@ -1104,7 +1794,8 @@ public class LogisticsServiceTests
 
         var vehicle = new Vehicle { VehicleId = Guid.NewGuid(), VehicleStatus = "Available" };
         var worker = new Worker { WorkerId = Guid.NewGuid(), Position = "Kurier", AssignedVehicleId = vehicle.VehicleId };
-        var package = new Package { TrackingNumber = Guid.NewGuid(), PackageStatus = PackageStatus.Sent };
+
+        var package = new Package { TrackingNumber = Guid.NewGuid(), PackageStatus = PackageStatus.Nadana };
 
         db.Vehicles.Add(vehicle);
         db.Workers.Add(worker);
@@ -1113,7 +1804,8 @@ public class LogisticsServiceTests
         var result = service.AssignPackageToCourier(package.TrackingNumber, worker.WorkerId);
 
         Assert.True(result);
-        Assert.Equal(PackageStatus.InTransit, package.PackageStatus);
+
+        Assert.Equal(PackageStatus.WTrasie, package.PackageStatus);
         Assert.Equal(worker.WorkerId, package.AssignedWorkerId);
     }
 }
@@ -1153,39 +1845,3 @@ using System.Reflection;
 
 --- PLIK: ProjectApp.Test.AssemblyInfo.cs ---
 
-//------------------------------------------------------------------------------
-// <auto-generated>
-//     Ten kod zostaÅ‚ wygenerowany przez narzÄ™dzie.
-//     Wersja wykonawcza:4.0.30319.42000
-//
-//     Zmiany w tym pliku mogÄ… spowodowaÄ‡ nieprawidÅ‚owe zachowanie i zostanÄ… utracone, jeÅ›li
-//     kod zostanie ponownie wygenerowany.
-// </auto-generated>
-//------------------------------------------------------------------------------
-
-using System;
-using System.Reflection;
-
-[assembly: System.Reflection.AssemblyCompanyAttribute("ProjectApp.Test")]
-[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b104179d5fe7966d71626d10142cc9e45a2db13a")]
-[assembly: System.Reflection.AssemblyProductAttribute("ProjectApp.Test")]
-[assembly: System.Reflection.AssemblyTitleAttribute("ProjectApp.Test")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
-
-// Wygenerowane przez klasÄ™ WriteCodeFragment programu MSBuild.
-
-
-
---- PLIK: ProjectApp.Test.GlobalUsings.g.cs ---
-
-// <auto-generated/>
-global using global::System;
-global using global::System.Collections.Generic;
-global using global::System.IO;
-global using global::System.Linq;
-global using global::System.Net.Http;
-global using global::System.Threading;
-global using global::System.Threading.Tasks;
-global using global::Xunit;

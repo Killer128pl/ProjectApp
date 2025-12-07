@@ -31,14 +31,14 @@ namespace ProjectApp.Console.UI
 
         private void ShowMyPackages()
         {
+            System.Console.Clear();
             var packages = _packageService.GetPackagesByClient(_currentClient.ClientId);
             if (!packages.Any()) { System.Console.WriteLine("Brak historii przesyłek."); ConsoleHelpers.Pause(); return; }
 
             foreach (var p in packages)
             {
-                System.Console.WriteLine(p);
+                ConsoleHelpers.WriteColoredPackage(p);
 
-                // --- LOGIKA ZWROTU PIENIĘDZY ---
                 if (p.PackageStatus == PackageStatus.Uszkodzona)
                 {
                     System.Console.ForegroundColor = ConsoleColor.Red;
@@ -51,12 +51,36 @@ namespace ProjectApp.Console.UI
 
         private void SendPackage()
         {
+            System.Console.Clear();
             System.Console.WriteLine("--- Nowa przesyłka ---");
-            float weight = ConsoleHelpers.ReadFloat("Podaj wagę (kg): ");
+
+            float weight = ConsoleHelpers.ReadFloat("Podaj wagę (kg): ", min: 0.1f);
             string size = ConsoleHelpers.ReadString("Podaj rozmiar: ");
 
+            System.Console.WriteLine("\nForma płatności:");
+            System.Console.WriteLine("1. Płacę teraz (Online)");
+            System.Console.WriteLine("2. Płatność przy odbiorze (Za pobraniem)");
+
+            int payOption = ConsoleHelpers.ReadInt("Twój wybór: ", 1, 2);
+
+            PaymentStatus status = PaymentStatus.Nieoplacona;
+
+            if (payOption == 2)
+            {
+                status = PaymentStatus.PlatnoscPrzyOdbiorze;
+            }
+            else
+            {
+                System.Console.Clear();
+                float cost = weight * 10.0f;
+                bool paid = PaymentSimulator.ProcessPayment(cost);
+                if (paid) status = PaymentStatus.Oplacona;
+                else status = PaymentStatus.Nieoplacona;
+            }
+            System.Console.Clear();
+
             var id = Guid.NewGuid();
-            _packageService.CreatePackage(id, _currentClient.ClientId, DateTime.Now, weight, size);
+            _packageService.CreatePackage(id, _currentClient.ClientId, DateTime.Now, weight, size, status);
 
             System.Console.WriteLine($"\nNadano! Nr: {id}.");
             ConsoleHelpers.Pause();
@@ -64,6 +88,7 @@ namespace ProjectApp.Console.UI
 
         private void PayForPackages()
         {
+            System.Console.Clear();
             var unpaid = _packageService.GetPackagesByClient(_currentClient.ClientId)
                                         .Where(p => p.PaymentStatus == PaymentStatus.Nieoplacona)
                                         .ToList();
@@ -76,10 +101,12 @@ namespace ProjectApp.Console.UI
             }
 
             for (int i = 0; i < unpaid.Count; i++)
-                System.Console.WriteLine($"{i + 1}) {unpaid[i].TrackingNumber} ({unpaid[i].Weight * 10:C})");
+            {
+                System.Console.Write($"{i + 1}) ");
+                ConsoleHelpers.WriteColoredPackage(unpaid[i], $"Cena: {unpaid[i].Weight * 10:C}");
+            }
 
             int idx = ConsoleHelpers.ReadIndex("Wybierz paczkę do opłacenia: ", unpaid.Count);
-            if (idx < 0) return;
 
             if (PaymentSimulator.ProcessPayment(unpaid[idx].Weight * 10.0f))
             {

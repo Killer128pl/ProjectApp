@@ -39,12 +39,14 @@ namespace ProjectApp.Console.UI
 
         private void AddWorker()
         {
+            System.Console.Clear();
             System.Console.WriteLine("--- Nowy pracownik ---");
+
             string imie = ConsoleHelpers.ReadString("Imię: ");
             string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
 
             System.Console.WriteLine("Stanowisko: 1 - Kurier, 2 - Magazynier");
-            int role = (int)ConsoleHelpers.ReadFloat("Wybierz: ");
+            int role = ConsoleHelpers.ReadInt("Wybierz: ", 1, 2);
             string position = role == 1 ? "Kurier" : "Magazynier";
 
             _db.Workers.Add(new Worker { FirstName = imie, LastName = nazwisko, Position = position });
@@ -54,6 +56,7 @@ namespace ProjectApp.Console.UI
 
         private void AddClient()
         {
+            System.Console.Clear();
             System.Console.WriteLine("--- Nowy klient ---");
             string imie = ConsoleHelpers.ReadString("Imię: ");
             string nazwisko = ConsoleHelpers.ReadString("Nazwisko: ");
@@ -64,6 +67,7 @@ namespace ProjectApp.Console.UI
 
         private void ShowGlobalReport()
         {
+            System.Console.Clear();
             var packages = _packageSvc.GetAll();
             System.Console.WriteLine($"=== Raport systemowy ===");
             System.Console.WriteLine($"Łączna liczba paczek: {packages.Count}");
