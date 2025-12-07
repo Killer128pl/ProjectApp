@@ -44,8 +44,8 @@ namespace ProjectApp.Console.UI
         {
             System.Console.Clear();
             var packs = _packageService.GetPackagesByWorker(_worker.WorkerId)
-                                       .Where(p => p.PackageStatus != PackageStatus.Dostarczona)
-                                       .ToList();
+                        .Where(p => p.PackageStatus != PackageStatus.Dostarczona && p.PackageStatus != PackageStatus.Uszkodzona)
+                        .ToList();
 
             if (!packs.Any())
             {
