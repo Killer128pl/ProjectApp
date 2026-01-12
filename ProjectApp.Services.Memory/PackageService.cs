@@ -32,6 +32,15 @@ namespace ProjectApp.Services
             return package.TrackingNumber;
         }
 
+        public bool DeletePackage(Guid trackingNumber)
+        {
+            var package = _packages.Get(trackingNumber);
+            if (package == null) return false;
+
+            _packages.Remove(package);
+            return true;
+        }
+
         public IReadOnlyList<Package> GetAll() => _packages.Query().OrderBy(m => m.SentDate).ToList();
 
         public IEnumerable<Package> Search(Guid trackingNumber) => _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);

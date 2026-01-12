@@ -10,6 +10,7 @@ namespace ProjectApp.ServiceAbstractions
         bool UpdatePaymentStatus(Guid trackingNumber, PaymentStatus status);
 
         Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size, PaymentStatus initialPaymentStatus);
+        bool DeletePackage(Guid trackingNumber);
 
         IReadOnlyList<Package> GetAll();
         IEnumerable<Package> Search(Guid trackingNumber);

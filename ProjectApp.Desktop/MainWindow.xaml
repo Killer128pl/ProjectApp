@@ -3,38 +3,93 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ProjectApp.Desktop"
         mc:Ignorable="d"
-        Title="System Obsługi Paczek" Height="450" Width="800">
+        Title="Panel Paczek (CRUD)" Height="550" Width="950">
 
-    <Grid Margin="10">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Lista Przesyłek" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
+        <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" Padding="10" Margin="0,0,0,15" Background="#F5F5F5">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Dodaj nową paczkę:" FontWeight="Bold" Margin="0,0,0,5"/>
+                <StackPanel Orientation="Horizontal">
 
-        <DataGrid Grid.Row="1" 
-                  ItemsSource="{Binding Packages}" 
-                  AutoGenerateColumns="False" 
-                  IsReadOnly="True"
-                  SelectionMode="Single"
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
+                        <TextBlock Text="Nadawca:"/>
+                        <ComboBox ItemsSource="{Binding AvailableClients}" 
+                                  SelectedItem="{Binding SelectedSender}"
+                                  Width="150" Height="25">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding FirstName}"/> <Run Text="{Binding LastName}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
+                        <TextBlock Text="Waga (kg):"/>
+                        <TextBox Text="{Binding NewWeight}" Width="50" Height="25" Padding="2"/>
+                    </StackPanel>
+
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
+                        <TextBlock Text="Rozmiar:"/>
+                        <TextBox Text="{Binding NewSize}" Width="100" Height="25" Padding="2"/>
+                    </StackPanel>
+
+                    <Button Content="DODAJ PACZKĘ" Command="{Binding AddCommand}" 
+                            Padding="15,3" Height="25" VerticalAlignment="Bottom" Background="#DDFFDD"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedPackage}"
+                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                   BorderThickness="1" BorderBrush="Gray">
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Status}" Value="Dostarczona">
+                            <Setter Property="Background" Value="LightGray"/>
+                            <Setter Property="Foreground" Value="DarkSlateGray"/>
+                            <Setter Property="FontStyle" Value="Italic"/>
+                        </DataTrigger>
+
+                        <DataTrigger Binding="{Binding Status}" Value="WTrasie">
+                            <Setter Property="Background" Value="#E6F2FF"/>
+                            <Setter Property="Foreground" Value="DarkBlue"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </DataTrigger>
+
+                        <DataTrigger Binding="{Binding Status}" Value="Uszkodzona">
+                            <Setter Property="Background" Value="#FFDDDD"/>
+                            <Setter Property="Foreground" Value="DarkRed"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Nr Przesyłki" Binding="{Binding TrackingNumber}" Width="*"/>
                 <DataGridTextColumn Header="Nadawca" Binding="{Binding SenderName}" Width="150"/>
-                <DataGridTextColumn Header="Waga (kg)" Binding="{Binding Weight}" Width="80"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
-                <DataGridTextColumn Header="Płatność" Binding="{Binding PaymentStatus}" Width="120"/>
+                <DataGridTextColumn Header="Waga" Binding="{Binding Weight}" Width="60"/>
+                <DataGridTextColumn Header="Rozmiar" Binding="{Binding Size}" Width="80"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Płatność" Binding="{Binding Payment}" Width="120"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="Odśwież dane" 
-                    Command="{Binding LoadCommand}" 
-                    Padding="15,5"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="Odśwież Listę" Command="{Binding LoadCommand}" Padding="10,5" Margin="5"/>
+            <Button Content="Zmień Status" Command="{Binding NextStatusCommand}" Padding="10,5" Margin="5" Background="#E6F2FF"/>
+            <Button Content="Usuń Zaznaczone" Command="{Binding DeleteCommand}" Padding="10,5" Margin="5" Background="#FFCCCC" Foreground="DarkRed"/>
         </StackPanel>
     </Grid>
 </Window>
