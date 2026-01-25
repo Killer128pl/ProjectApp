@@ -4,92 +4,117 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Panel Paczek (CRUD)" Height="550" Width="950">
+        Title="System Kurierski v2.0 (SQL)" Height="650" Width="1000"
+        WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="15">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" Background="#F0F0F0" Padding="5">
+            <MenuItem Header="_Aplikacja">
+                <MenuItem Header="Odśwież dane" Command="{Binding LoadCommand}"/>
+                <Separator/>
+                <MenuItem Header="Zamknij" Click="Close_Click"/>
+            </MenuItem>
 
-        <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" Padding="10" Margin="0,0,0,15" Background="#F5F5F5">
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="Dodaj nową paczkę:" FontWeight="Bold" Margin="0,0,0,5"/>
-                <StackPanel Orientation="Horizontal">
+            <MenuItem Header="_Klienci">
+                <MenuItem Header="👤 Zarządzaj klientami (Dodaj/Usuń)..." Command="{Binding ManageClientsCommand}"/>
+            </MenuItem>
+        </Menu>
 
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
-                        <TextBlock Text="Nadawca:"/>
-                        <ComboBox ItemsSource="{Binding AvailableClients}" 
-                                  SelectedItem="{Binding SelectedSender}"
-                                  Width="150" Height="25">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock>
-                                        <Run Text="{Binding FirstName}"/> <Run Text="{Binding LastName}"/>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+        <StatusBar DockPanel.Dock="Bottom" Background="#007ACC" Foreground="White">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatsText}" FontWeight="SemiBold"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,0,15" Background="White">
+                <StackPanel>
+                    <TextBlock Text="SZYBKIE NADANIE PACZKI" FontWeight="Bold" Foreground="Gray" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel Margin="0,0,15,0">
+                            <TextBlock Text="Nadawca:"/>
+                            <ComboBox ItemsSource="{Binding AvailableClients}" 
+                                      SelectedItem="{Binding SelectedSender}"
+                                      Width="220" Height="28">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <Run Text="{Binding FirstName}"/> <Run Text="{Binding LastName}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,0,15,0">
+                            <TextBlock Text="Waga (kg):"/>
+                            <TextBox Text="{Binding NewWeight}" Width="60" Height="28" Padding="3" VerticalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,0,15,0">
+                            <TextBlock Text="Rozmiar:"/>
+                            <TextBox Text="{Binding NewSize}" Width="100" Height="28" Padding="3" VerticalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <Button Content="NADAJ PACZKĘ" Command="{Binding AddCommand}" 
+                                Padding="15,0" Height="28" VerticalAlignment="Bottom" 
+                                Background="#007ACC" Foreground="White" FontWeight="Bold" BorderThickness="0"/>
                     </StackPanel>
-
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
-                        <TextBlock Text="Waga (kg):"/>
-                        <TextBox Text="{Binding NewWeight}" Width="50" Height="25" Padding="2"/>
-                    </StackPanel>
-
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,15,0">
-                        <TextBlock Text="Rozmiar:"/>
-                        <TextBox Text="{Binding NewSize}" Width="100" Height="25" Padding="2"/>
-                    </StackPanel>
-
-                    <Button Content="DODAJ PACZKĘ" Command="{Binding AddCommand}" 
-                            Padding="15,3" Height="25" VerticalAlignment="Bottom" Background="#DDFFDD"/>
                 </StackPanel>
+            </Border>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedPackage}"
+                      AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                      BorderThickness="1" BorderBrush="#DDDDDD" GridLinesVisibility="Horizontal">
+
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Status}" Value="Dostarczona">
+                                <Setter Property="Background" Value="#F5F5F5"/>
+                                <Setter Property="Foreground" Value="Gray"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Status}" Value="WTrasie">
+                                <Setter Property="Background" Value="#E6F7FF"/>
+                                <Setter Property="Foreground" Value="#0050b3"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Status}" Value="Uszkodzona">
+                                <Setter Property="Background" Value="#FFF1F0"/>
+                                <Setter Property="Foreground" Value="#cf1322"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nr Przesyłki" Binding="{Binding TrackingNumber}" Width="*"/>
+                    <DataGridTextColumn Header="Nadawca" Binding="{Binding SenderName}" Width="180"/>
+                    <DataGridTextColumn Header="Waga" Binding="{Binding Weight}" Width="60"/>
+                    <DataGridTextColumn Header="Rozmiar" Binding="{Binding Size}" Width="80"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                    <DataGridTextColumn Header="Płatność" Binding="{Binding Payment}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+
+                <Button Content="💳 Opłać / Zmień Płatność" Command="{Binding ChangePaymentCommand}" 
+                        Padding="15,8" Margin="5" Background="#E8F8F5" BorderBrush="#2ECC71" Foreground="#27AE60" FontWeight="Bold"/>
+
+                <Button Content="Zmień Status" Command="{Binding NextStatusCommand}" 
+                        Padding="15,8" Margin="5" Background="White" BorderBrush="Gray"/>
+
+                <Button Content="Usuń Paczkę" Command="{Binding DeleteCommand}" 
+                        Padding="15,8" Margin="5" Background="#FFE6E6" BorderBrush="Red" Foreground="Red"/>
             </StackPanel>
-        </Border>
-
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedPackage}"
-                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
-                  BorderThickness="1" BorderBrush="Gray">
-
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Status}" Value="Dostarczona">
-                            <Setter Property="Background" Value="LightGray"/>
-                            <Setter Property="Foreground" Value="DarkSlateGray"/>
-                            <Setter Property="FontStyle" Value="Italic"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding Status}" Value="WTrasie">
-                            <Setter Property="Background" Value="#E6F2FF"/>
-                            <Setter Property="Foreground" Value="DarkBlue"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding Status}" Value="Uszkodzona">
-                            <Setter Property="Background" Value="#FFDDDD"/>
-                            <Setter Property="Foreground" Value="DarkRed"/>
-                            <Setter Property="FontWeight" Value="Bold"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Nr Przesyłki" Binding="{Binding TrackingNumber}" Width="*"/>
-                <DataGridTextColumn Header="Nadawca" Binding="{Binding SenderName}" Width="150"/>
-                <DataGridTextColumn Header="Waga" Binding="{Binding Weight}" Width="60"/>
-                <DataGridTextColumn Header="Rozmiar" Binding="{Binding Size}" Width="80"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" FontWeight="Bold"/>
-                <DataGridTextColumn Header="Płatność" Binding="{Binding Payment}" Width="120"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-            <Button Content="Odśwież Listę" Command="{Binding LoadCommand}" Padding="10,5" Margin="5"/>
-            <Button Content="Zmień Status" Command="{Binding NextStatusCommand}" Padding="10,5" Margin="5" Background="#E6F2FF"/>
-            <Button Content="Usuń Zaznaczone" Command="{Binding DeleteCommand}" Padding="10,5" Margin="5" Background="#FFCCCC" Foreground="DarkRed"/>
-        </StackPanel>
-    </Grid>
+        </Grid>
+    </DockPanel>
 </Window>

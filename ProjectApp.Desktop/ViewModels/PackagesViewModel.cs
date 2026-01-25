@@ -17,6 +17,9 @@ namespace ProjectApp.Desktop.ViewModels
         public ObservableCollection<PackageListItemViewModel> Packages { get; } = new();
         public ObservableCollection<Client> AvailableClients { get; } = new();
 
+        private string _statsText = "Gotowy";
+        public string StatsText { get => _statsText; set => Set(ref _statsText, value); }
+
         private PackageListItemViewModel? _selectedPackage;
         public PackageListItemViewModel? SelectedPackage
         {
@@ -27,28 +30,26 @@ namespace ProjectApp.Desktop.ViewModels
                 {
                     DeleteCommand.RaiseCanExecuteChanged();
                     NextStatusCommand.RaiseCanExecuteChanged();
+                    ChangePaymentCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
         private Client? _selectedSender;
-        public Client? SelectedSender
-        {
-            get => _selectedSender;
-            set => Set(ref _selectedSender, value);
-        }
+        public Client? SelectedSender { get => _selectedSender; set => Set(ref _selectedSender, value); }
 
-        private float _newWeight;
+        private float _newWeight = 1.0f;
         public float NewWeight { get => _newWeight; set => Set(ref _newWeight, value); }
 
-        private string _newSize = string.Empty;
+        private string _newSize = "Mała";
         public string NewSize { get => _newSize; set => Set(ref _newSize, value); }
 
         public RelayCommand LoadCommand { get; }
         public RelayCommand AddCommand { get; }
         public RelayCommand DeleteCommand { get; }
         public RelayCommand NextStatusCommand { get; }
-
+        public RelayCommand ManageClientsCommand { get; }
+        public RelayCommand ChangePaymentCommand { get; }
 
         public PackagesViewModel(IPackageService packageSvc, DatabaseDbContext db)
         {
@@ -59,9 +60,9 @@ namespace ProjectApp.Desktop.ViewModels
             AddCommand = new RelayCommand(AddPackage);
             DeleteCommand = new RelayCommand(DeletePackage, () => SelectedPackage != null);
             NextStatusCommand = new RelayCommand(OpenStatusDialog, () => SelectedPackage != null);
+            ManageClientsCommand = new RelayCommand(OpenClientsManager);
 
-            NewWeight = 1.0f;
-            NewSize = "Mała";
+            ChangePaymentCommand = new RelayCommand(OpenPaymentSimulator, () => SelectedPackage != null);
 
             LoadData();
         }
@@ -70,6 +71,7 @@ namespace ProjectApp.Desktop.ViewModels
         {
             Packages.Clear();
             var items = _packageSvc.GetAll();
+            float totalWeight = 0;
 
             foreach (var item in items)
             {
@@ -85,47 +87,64 @@ namespace ProjectApp.Desktop.ViewModels
                     Status = item.PackageStatus.ToString(),
                     Payment = item.PaymentStatus.ToString()
                 });
+                totalWeight += item.Weight;
             }
 
+            StatsText = $"Liczba paczek: {items.Count}  |  Łączna waga: {totalWeight:F1} kg";
+
+            var currentSelectedId = SelectedSender?.ClientId;
             AvailableClients.Clear();
-            foreach (var c in _db.Clients)
-            {
-                AvailableClients.Add(c);
-            }
+            var clientsFromDb = _db.Clients.OrderBy(c => c.LastName).ToList();
+            foreach (var c in clientsFromDb) AvailableClients.Add(c);
+
+            if (currentSelectedId != null)
+                SelectedSender = AvailableClients.FirstOrDefault(c => c.ClientId == currentSelectedId);
 
             if (SelectedSender == null && AvailableClients.Any())
-            {
                 SelectedSender = AvailableClients.First();
-            }
         }
 
         private void AddPackage()
         {
             if (SelectedSender == null)
             {
-                MessageBox.Show("Wybierz nadawcę z listy!");
+                MessageBox.Show("Najpierw dodaj klienta (Menu -> Klienci)!");
                 return;
             }
-
-            _packageSvc.CreatePackage(
-                Guid.NewGuid(),
-                SelectedSender.ClientId,
-                DateTime.Now,
-                NewWeight,
-                NewSize,
-                PaymentStatus.Nieoplacona
-            );
-
+            _packageSvc.CreatePackage(Guid.NewGuid(), SelectedSender.ClientId, DateTime.Now, NewWeight, NewSize, PaymentStatus.Nieoplacona);
             NewWeight = 1.0f;
             NewSize = "Mała";
             LoadData();
         }
 
-        private void DeletePackage()
+        private void OpenClientsManager()
+        {
+            var manager = new ClientsManagerWindow(_db);
+            manager.Owner = Application.Current.MainWindow;
+            manager.ShowDialog();
+            LoadData();
+        }
+
+        private void OpenPaymentSimulator()
         {
             if (SelectedPackage == null) return;
 
-            if (MessageBox.Show("Na pewno usunąć tę paczkę?", "Potwierdzenie", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            var paymentWin = new PaymentWindow();
+            paymentWin.Owner = Application.Current.MainWindow;
+
+            if (paymentWin.ShowDialog() == true)
+            {
+                _packageSvc.UpdatePaymentStatus(SelectedPackage.TrackingNumber, paymentWin.ResultStatus);
+
+                LoadData();
+                MessageBox.Show("Płatność zaktualizowana!");
+            }
+        }
+
+        private void DeletePackage()
+        {
+            if (SelectedPackage == null) return;
+            if (MessageBox.Show("Usunąć paczkę?", "Potwierdzenie", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 _packageSvc.DeletePackage(SelectedPackage.TrackingNumber);
                 LoadData();
@@ -135,16 +154,13 @@ namespace ProjectApp.Desktop.ViewModels
         private void OpenStatusDialog()
         {
             if (SelectedPackage == null) return;
-
             if (Enum.TryParse<PackageStatus>(SelectedPackage.Status, out var currentStatus))
             {
                 var dialog = new StatusWindow(currentStatus);
                 dialog.Owner = Application.Current.MainWindow;
-
                 if (dialog.ShowDialog() == true)
                 {
-                    var newStatus = dialog.SelectedStatus;
-                    _packageSvc.UpdatePackageStatus(SelectedPackage.TrackingNumber, newStatus);
+                    _packageSvc.UpdatePackageStatus(SelectedPackage.TrackingNumber, dialog.SelectedStatus);
                     LoadData();
                 }
             }

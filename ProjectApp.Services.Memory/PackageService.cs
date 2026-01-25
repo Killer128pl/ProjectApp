@@ -10,10 +10,12 @@ namespace ProjectApp.Services
     public class PackageService : IPackageService
     {
         private readonly IPackageRepository _packages;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public PackageService(IPackageRepository packages)
+        public PackageService(IPackageRepository packages, IUnitOfWork unitOfWork)
         {
             _packages = packages;
+            _unitOfWork = unitOfWork;
         }
 
         public Guid CreatePackage(Guid trackingNumber, Guid senderId, DateTime sentDate, float weight, string size, PaymentStatus initialPaymentStatus)
@@ -28,7 +30,10 @@ namespace ProjectApp.Services
                 PackageStatus = PackageStatus.Nadana,
                 PaymentStatus = initialPaymentStatus
             };
+
             _packages.Add(package);
+            _unitOfWork.SaveChanges();
+
             return package.TrackingNumber;
         }
 
@@ -38,15 +43,13 @@ namespace ProjectApp.Services
             if (package == null) return false;
 
             _packages.Remove(package);
+            _unitOfWork.SaveChanges();
             return true;
         }
 
-        public IReadOnlyList<Package> GetAll() => _packages.Query().OrderBy(m => m.SentDate).ToList();
-
+        public IReadOnlyList<Package> GetAll() => _packages.Query().OrderByDescending(m => m.SentDate).ToList();
         public IEnumerable<Package> Search(Guid trackingNumber) => _packages.GetAll().Where(p => p.TrackingNumber == trackingNumber);
-
         public IEnumerable<Package> GetPackagesByClient(Guid clientId) => _packages.GetAll().Where(p => p.SenderId == clientId);
-
         public IEnumerable<Package> GetPackagesByWorker(Guid workerId) => _packages.GetAll().Where(p => p.AssignedWorkerId == workerId);
 
         public bool UpdatePackageStatus(Guid trackingNumber, PackageStatus status)
@@ -54,6 +57,7 @@ namespace ProjectApp.Services
             var m = _packages.Get(trackingNumber);
             if (m is null) return false;
             m.PackageStatus = status;
+            _unitOfWork.SaveChanges();
             return true;
         }
 
@@ -62,6 +66,7 @@ namespace ProjectApp.Services
             var m = _packages.Get(trackingNumber);
             if (m is null) return false;
             m.PaymentStatus = status;
+            _unitOfWork.SaveChanges(); // <--- Zapis płatności
             return true;
         }
     }
