@@ -1,4 +1,4 @@
-﻿using ProjectApp.DataAccess.Memory;
+﻿using ProjectApp.DataAccess.Database;
 using ProjectApp.DataModel;
 using ProjectApp.Desktop.Infrastructure;
 using ProjectApp.ServiceAbstractions;
@@ -12,10 +12,9 @@ namespace ProjectApp.Desktop.ViewModels
     public class PackagesViewModel : BaseViewModel
     {
         private readonly IPackageService _packageSvc;
-        private readonly MemoryDbContext _db;
+        private readonly DatabaseDbContext _db;
 
         public ObservableCollection<PackageListItemViewModel> Packages { get; } = new();
-
         public ObservableCollection<Client> AvailableClients { get; } = new();
 
         private PackageListItemViewModel? _selectedPackage;
@@ -50,7 +49,8 @@ namespace ProjectApp.Desktop.ViewModels
         public RelayCommand DeleteCommand { get; }
         public RelayCommand NextStatusCommand { get; }
 
-        public PackagesViewModel(IPackageService packageSvc, MemoryDbContext db)
+
+        public PackagesViewModel(IPackageService packageSvc, DatabaseDbContext db)
         {
             _packageSvc = packageSvc;
             _db = db;
@@ -139,7 +139,6 @@ namespace ProjectApp.Desktop.ViewModels
             if (Enum.TryParse<PackageStatus>(SelectedPackage.Status, out var currentStatus))
             {
                 var dialog = new StatusWindow(currentStatus);
-
                 dialog.Owner = Application.Current.MainWindow;
 
                 if (dialog.ShowDialog() == true)

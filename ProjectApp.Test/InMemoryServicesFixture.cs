@@ -18,7 +18,7 @@ namespace ProjectApp.Test
             IPackageRepository packageRepo = new PackageRepositoryMemory(Db);
             PackageService = new PackageService(packageRepo);
 
-            var dataSeeder = new DataSeeder(PackageService, Db);
+            var dataSeeder = new DataSeeder(PackageService, Db, null);
             dataSeeder.Seed();
         }
     }

@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ProjectApp.Abstractions;
-using ProjectApp.DataAccess.Memory;
-using ProjectApp.DataAccess.Memory.Repositories;
+using ProjectApp.DataAccess.Database;
+using ProjectApp.DataAccess.Database.Repositories;
 using ProjectApp.Desktop.ViewModels;
 using ProjectApp.ServiceAbstractions;
 using ProjectApp.Services;
@@ -18,23 +19,53 @@ namespace ProjectApp.Desktop
         {
             var services = new ServiceCollection();
 
-            services.AddSingleton<MemoryDbContext>();
+            var connectionString = "Server=(localdb)\\mssqllocaldb;Database=ProjectAppDb;Trusted_Connection=True;MultipleActiveResultSets=true";
 
-            services.AddSingleton<IPackageRepository, PackageRepositoryMemory>();
+            services.AddDbContext<DatabaseDbContext>(options =>
+                options.UseSqlServer(connectionString));
 
-            services.AddSingleton<IPackageService, PackageService>();
-            services.AddSingleton<LogisticsService>();
+            services.AddScoped<IUnitOfWork, UnitOfWorkDatabase>();
 
-            services.AddSingleton<DataSeeder>();
+            services.AddScoped<IPackageRepository, PackageRepositoryDatabase>();
 
-            services.AddSingleton<MainWindow>();
-            services.AddSingleton<PackagesViewModel>();
+            services.AddScoped<IPackageService, PackageService>();
+            services.AddScoped<LogisticsService>();
+            services.AddScoped<DataSeeder>(provider => new DataSeeder(provider.GetRequiredService<IPackageService>(), null, provider.GetRequiredService<DatabaseDbContext>()));
+
+            services.AddTransient<MainWindow>();
+            services.AddTransient<PackagesViewModel>();
 
             Services = services.BuildServiceProvider();
 
-            Services.GetRequiredService<DataSeeder>().Seed();
 
-            Services.GetRequiredService<MainWindow>().Show();
+            EnsureDatabaseCreated();
+
+            SeedDataIfEmpty();
+
+            var mainWindow = Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+        }
+
+        private void EnsureDatabaseCreated()
+        {
+            using (var scope = Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<DatabaseDbContext>();
+                db.Database.EnsureCreated();
+            }
+        }
+
+        private void SeedDataIfEmpty()
+        {
+            using (var scope = Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<DatabaseDbContext>();
+                if (!db.Packages.AnyAsync().Result)
+                {
+                    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+                    seeder.Seed();
+                }
+            }
         }
     }
 }

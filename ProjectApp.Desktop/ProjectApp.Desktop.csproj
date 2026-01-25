@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProjectApp.DataAccess.Memory\ProjectApp.DataAccess.Memory.csproj" />
+    <ProjectReference Include="..\ProjectApp.Database\ProjectApp.Database.csproj" />
     <ProjectReference Include="..\ProjectApp.DataModel\ProjectApp.DataModel.csproj" />
     <ProjectReference Include="..\ProjectApp.ServiceAbstractions\ProjectApp.ServiceAbstractions.csproj" />
     <ProjectReference Include="..\ProjectApp.Services.Memory\ProjectApp.Services.csproj" />

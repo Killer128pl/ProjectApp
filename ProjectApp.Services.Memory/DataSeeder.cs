@@ -1,39 +1,73 @@
-﻿using ProjectApp.DataAccess.Memory;
+﻿using ProjectApp.DataAccess.Database;
+using ProjectApp.DataAccess.Memory;
 using ProjectApp.DataModel;
 using ProjectApp.ServiceAbstractions;
 using System;
 
 namespace ProjectApp.Services
 {
-    public class DataSeeder : IDataSeeder
+    public class DataSeeder
     {
-        private readonly IPackageService _packageService;
-        private readonly MemoryDbContext _db;
+        private readonly IPackageService _packageSvc;
 
-        public DataSeeder(IPackageService packageService, MemoryDbContext db)
+        private readonly MemoryDbContext? _memoryDb;
+        private readonly DatabaseDbContext? _sqlDb;
+
+        public DataSeeder(IPackageService packageSvc, MemoryDbContext? memoryDb, DatabaseDbContext? sqlDb)
         {
-            _packageService = packageService;
-            _db = db;
+            _packageSvc = packageSvc;
+            _memoryDb = memoryDb;
+            _sqlDb = sqlDb;
         }
 
-        public SeedResult Seed()
+        public void Seed()
         {
-            // Przykładowy klient
-            var client = new Client { FirstName = "Jan", LastName = "Kowalski", ClientId = Guid.NewGuid() };
-            _db.Clients.Add(client);
+            var client = new Client
+            {
+                ClientId = Guid.NewGuid(),
+                FirstName = "Jan",
+                LastName = "Kowalski",
+                PhoneNumber = 123456789
+            };
 
-            var pckg1 = _packageService.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now, 2.5f, "Średnia", PaymentStatus.Nieoplacona);
-            var pckg2 = _packageService.CreatePackage(Guid.Parse("21372137-2137-2137-2137-213721372137"), client.ClientId, DateTime.Now.AddDays(-1), 1.0f, "Mała", PaymentStatus.Oplacona);
-            var pckg3 = _packageService.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now.AddDays(-2), 5.0f, "Duża", PaymentStatus.PlatnoscPrzyOdbiorze);
+            var worker1 = new Worker { WorkerId = Guid.NewGuid(), FirstName = "Piotr", LastName = "Szybki", Position = "Kurier" };
+            var worker2 = new Worker { WorkerId = Guid.NewGuid(), FirstName = "Adam", LastName = "Nowak", Position = "Magazynier" };
 
-            // Flota i Kadra
-            _db.Vehicles.Add(new Vehicle { Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Dostępny" });
-            _db.Vehicles.Add(new Vehicle { Brand = "Iveco", Model = "Daily", RegNumber = "ID 31245", VehicleStatus = "Dostępny" });
+            var vehicle1 = new Vehicle { VehicleId = Guid.NewGuid(), Brand = "Ford", Model = "Transit", RegNumber = "WA 12345", VehicleStatus = "Dostępny" };
+            var vehicle2 = new Vehicle { VehicleId = Guid.NewGuid(), Brand = "Iveco", Model = "Daily", RegNumber = "ID 99999", VehicleStatus = "Dostępny" };
 
-            _db.Workers.Add(new Worker { FirstName = "Piotr", LastName = "Szybki", Position = "Kurier" });
-            _db.Workers.Add(new Worker { FirstName = "Adam", LastName = "Nowak", Position = "Magazynier" });
+            if (_sqlDb != null)
+            {
+                try
+                {
+                    _sqlDb.Clients.Add(client);
+                    _sqlDb.Workers.AddRange(worker1, worker2);
+                    _sqlDb.Vehicles.AddRange(vehicle1, vehicle2);
+                    _sqlDb.SaveChanges();
+                }
+                catch
+                {
+                }
+            }
 
-            return new SeedResult { pckg1 = pckg1, pckg2 = pckg2, pckg3 = pckg3 };
+            if (_memoryDb != null)
+            {
+                _memoryDb.Clients.Add(client);
+                _memoryDb.Workers.Add(worker1);
+                _memoryDb.Workers.Add(worker2);
+                _memoryDb.Vehicles.Add(vehicle1);
+                _memoryDb.Vehicles.Add(vehicle2);
+            }
+
+            try
+            {
+                _packageSvc.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now, 2.5f, "Mała", PaymentStatus.Oplacona);
+                _packageSvc.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now.AddDays(-1), 15.0f, "Duża", PaymentStatus.Nieoplacona);
+                _packageSvc.CreatePackage(Guid.NewGuid(), client.ClientId, DateTime.Now.AddDays(-2), 5.0f, "Średnia", PaymentStatus.PlatnoscPrzyOdbiorze);
+            }
+            catch
+            {
+            }
         }
     }
 }

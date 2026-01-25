@@ -1,4 +1,4 @@
-﻿using ProjectApp.DataAccess.Memory;
+﻿using ProjectApp.DataAccess.Database;
 using ProjectApp.DataModel;
 using System;
 using System.Linq;
@@ -7,8 +7,12 @@ namespace ProjectApp.Services
 {
     public class LogisticsService
     {
-        private readonly MemoryDbContext _db;
-        public LogisticsService(MemoryDbContext db) => _db = db;
+        private readonly DatabaseDbContext _db;
+
+        public LogisticsService(DatabaseDbContext db)
+        {
+            _db = db;
+        }
 
         public bool AssignVehicleToWorker(Guid workerId, Guid vehicleId)
         {
@@ -20,6 +24,8 @@ namespace ProjectApp.Services
 
             worker.AssignedVehicleId = vehicle.VehicleId;
             vehicle.VehicleStatus = "Zajęty";
+
+            _db.SaveChanges();
             return true;
         }
 
@@ -34,6 +40,7 @@ namespace ProjectApp.Services
             package.AssignedWorkerId = worker.WorkerId;
             package.PackageStatus = PackageStatus.WTrasie;
 
+            _db.SaveChanges();
             return true;
         }
     }

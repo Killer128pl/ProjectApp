@@ -16,7 +16,7 @@ var packageSvc = new PackageService(packageRepo);
 var logisticsSvc = new LogisticsService(db);
 
 
-var seeder = new DataSeeder(packageSvc, db);
+var seeder = new DataSeeder(packageSvc, db, null);
 seeder.Seed();
 
 
